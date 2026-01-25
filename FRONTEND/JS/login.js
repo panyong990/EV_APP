@@ -2,9 +2,18 @@
     FRONTEND/JS/login.js
    =========================== */
 
-console.log("LOGIN.JS LOADED (FIXED FLOW)");
+const API_BASE = "http://localhost/WEBPROG_PROJ/BACKEND/API/AUTH";
+let tempUserId = null;
+let tempEmail = null;
 
-// Toggle functions
+// AUTO-REDIRECT: If user is already logged in, go to dashboard
+document.addEventListener("DOMContentLoaded", () => {
+    if (localStorage.getItem("user_id")) {
+        window.location.href = "dashboard.html";
+    }
+});
+
+// ===== UI TOGGLE FUNCTIONS =====
 function showSignup() {
     const loginForm = document.getElementById("loginForm");
     const signupForm = document.getElementById("signupForm");
@@ -25,21 +34,22 @@ function showLogin() {
     const forgotForm = document.getElementById("forgotForm");
     
     if(forgotForm) forgotForm.classList.add("hidden");
-    
     clearErrors();
-    signupForm.classList.add("slide-out-left");
-    setTimeout(() => {
-        signupForm.classList.add("hidden");
+    
+    if (!signupForm.classList.contains("hidden")) {
+        signupForm.classList.add("slide-out-left");
+        setTimeout(() => {
+            signupForm.classList.add("hidden");
+            signupForm.classList.remove("slide-out-left"); 
+            loginForm.classList.remove("hidden");
+            loginForm.classList.add("slide-in-right");
+            setTimeout(() => loginForm.classList.remove("slide-in-right"), 300);
+        }, 300);
+    } else {
         loginForm.classList.remove("hidden");
         loginForm.classList.add("slide-in-right");
-    }, 300);
-}
-
-function showForgot() {
-    document.getElementById("loginForm").classList.add("hidden");
-    document.getElementById("signupForm").classList.add("hidden");
-    document.getElementById("forgotForm").classList.remove("hidden");
-    switchForgotStep(1);
+        setTimeout(() => loginForm.classList.remove("slide-in-right"), 300);
+    }
 }
 
 function showOTP(userId, purpose, email = "") {
@@ -51,10 +61,21 @@ function showOTP(userId, purpose, email = "") {
     document.getElementById("otpPurpose").value = purpose;
     
     if (email) {
-        document.getElementById("otpEmailDisplay").innerText = email;
+        const [name, domain] = email.split('@');
+        const masked = name.length > 2 ? name[0] + '***' + name[name.length - 1] + '@' + domain : email;
+        document.getElementById("otpEmailDisplay").innerText = masked;
     }
+    startOtpTimer();
 }
 
+function showForgot() {
+    document.getElementById("loginForm").classList.add("hidden");
+    document.getElementById("signupForm").classList.add("hidden");
+    document.getElementById("forgotForm").classList.remove("hidden");
+    switchForgotStep(1);
+}
+
+// ===== UI HELPERS =====
 function clearErrors() {
     document.querySelectorAll(".error-message").forEach((error) => {
         error.classList.remove("show");
@@ -196,42 +217,30 @@ document.getElementById("signupFormElement")?.addEventListener("submit", async f
     successMsg.textContent = message;
     successMsg.classList.add("show");
     
-    // Clear previous timeout to prevent glitches
     if (successMsg.hideTimeout) clearTimeout(successMsg.hideTimeout);
     successMsg.hideTimeout = setTimeout(() => successMsg.classList.remove("show"), 3000);
 }
 
-const API_BASE = "http://localhost/WEBPROG_PROJ/BACKEND/API/AUTH";
-let tempUserId = null;
-let tempEmail = null;
-
-// ===== OTP SENDER (Smart) =====
-async function sendOtpAsync(userId, purpose) {
-    try {
-        const res = await fetch(`${API_BASE}/resend_otp.php`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, purpose: purpose })
-        });
-        const data = await res.json();
-        
-        if (data.ok) {
-            showSuccess("Verification code sent to email.");
-        } else {
-            // If rate limited (e.g. user just registered), don't show error, just log it.
-            // This prevents "Please wait 60s" error appearing immediately after registration.
-            console.log("OTP Send Status:", data.error);
-        }
-    } catch (e) {
-        console.error("OTP Send Error", e);
+function setLoading(btn, isLoading, text = "Submit") {
+    if (!btn) return;
+    if (isLoading) {
+        btn.dataset.originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${text}`;
+        btn.classList.add("opacity-75", "cursor-not-allowed");
+    } else {
+        btn.disabled = false;
+        btn.innerText = btn.dataset.originalText || text;
+        btn.classList.remove("opacity-75", "cursor-not-allowed");
     }
 }
 
-// ===== LOGIN HANDLER =====
+// ===== AUTH HANDLERS =====
+
+// LOGIN
 document.getElementById("loginFormElement")?.addEventListener("submit", async function (e) {
     e.preventDefault();
     clearErrors();
-
     const btn = e.target.querySelector("button[type='submit']");
     setLoading(btn, true, "Signing In...");
 
@@ -244,142 +253,150 @@ document.getElementById("loginFormElement")?.addEventListener("submit", async fu
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
         });
+        const data = await res.json();
 
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok || !data || data.ok !== true) {
-            setLoading(btn, false);
-            // Handle specific "require_verification" case from login.php
-            if (data && data.require_verification) {
-                tempUserId = data.user_id;
-                tempEmail = data.email;
-                
-                // FIX: Trigger OTP email here because login.php doesn't send it anymore
-                sendOtpAsync(tempUserId, 'register');
-                showOTP(tempUserId, 'register', tempEmail);
-                return;
-            }
-            
-            showSuccess(data?.error || "Invalid email or password");
-            return;
-        }
-
-        // ✅ LOGIN SUCCESS
         if (data.ok) {
+            console.log("Login Data:", data.user); // Debugging: Check console to see what fields are returned
             localStorage.setItem("user_id", data.user.id);
             localStorage.setItem("user_name", data.user.username);
-            localStorage.setItem("full_display_name", data.user.name);
             localStorage.setItem("user_email", data.user.email);
+            let fName = data.user.first_name || data.user.firstName || data.user.firstname || data.user.Firstname || '';
+            let lName = data.user.last_name || data.user.lastName || data.user.lastname || data.user.Lastname || '';
             
-            // FIX: Redirect to Dashboard with feedback
+            // Fallback: If separate fields are missing, try to split 'name'
+            if (!fName && data.user.name) {
+                const parts = data.user.name.trim().split(' ');
+                fName = parts[0];
+                lName = parts.slice(1).join(' ');
+            }
+            
+            localStorage.setItem("first_name", fName);
+            localStorage.setItem("last_name", lName);
+
+            const fullName = `${fName} ${lName}`.trim();
+            localStorage.setItem("full_display_name", fullName || data.user.full_name || "");
+
             showSuccess("Login Successful!");
             setTimeout(() => window.location.href = "dashboard.html", 500);
+        } else if (data.require_verification) {
+            tempUserId = data.user_id;
+            tempEmail = data.email;
+            await sendOtpAsync(tempUserId, 'register');
+            showOTP(tempUserId, 'register', tempEmail);
+        } else {
+            showSuccess(data.error || "Invalid Credentials");
         }
     } catch (err) {
-        console.error("LOGIN ERROR:", err);
+        showSuccess("Server connection error.");
+    } finally {
         setLoading(btn, false);
-        showSuccess("Server connection error. Check XAMPP.");
     }
 });
 
-// ===== SIGNUP HANDLER =====
+// SIGNUP
 document.getElementById("signupFormElement")?.addEventListener("submit", async function (e) {
     e.preventDefault();
-    clearErrors();
-
     const btn = e.target.querySelector("button[type='submit']");
     setLoading(btn, true, "Creating Account...");
 
-    const username = document.getElementById("signupUserCustom")?.value.trim();
-    const firstName = document.getElementById("signupFirstName")?.value.trim();
-    const lastName = document.getElementById("signupLastName")?.value.trim();
-    const email = document.getElementById("signupEmail")?.value.trim();
-    const password = document.getElementById("signupPassword")?.value;
-    const confirmPassword = document.getElementById("confirmPassword")?.value;
+    const payload = {
+        username: document.getElementById("signupUserCustom")?.value.trim(),
+        firstName: document.getElementById("signupFirstName")?.value.trim(),
+        lastName: document.getElementById("signupLastName")?.value.trim(),
+        email: document.getElementById("signupEmail")?.value.trim(),
+        password: document.getElementById("signupPassword")?.value,
+        confirmPassword: document.getElementById("confirmPassword")?.value
+    };
 
-    if (password !== confirmPassword) {
+    if (payload.password !== payload.confirmPassword) {
         setLoading(btn, false);
-        showSuccess("Passwords do not match.");
-        return;
+        return showSuccess("Passwords do not match.");
     }
 
     try {
         const res = await fetch(`${API_BASE}/register.php`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, firstName, lastName, email, password, confirmPassword }),
+            body: JSON.stringify(payload),
         });
+        const data = await res.json();
 
-        const data = await res.json().catch(() => null);
-        setLoading(btn, false);
-
-        if (!res.ok || !data || data.ok !== true) {
-            showSuccess(data?.error || "Signup failed");
-            return;
-        }
-
-        // FIX: Go straight to OTP instead of Login
-        if (data.require_verification) {
-            showSuccess("Verification code sent to email.");
+        if (data.ok && data.require_verification) {
             showOTP(data.temp_user_id, 'register', data.email);
         } else {
-            showSuccess("Account created! Please login.");
-            showLogin();
+            showSuccess(data.error || "Signup failed");
         }
     } catch (err) {
+        showSuccess("Connection error.");
+    } finally {
         setLoading(btn, false);
-        showSuccess("Server connection error.");
     }
 });
 
-// ===== OTP FORM SUBMIT HANDLER =====
+// OTP VERIFICATION
 document.getElementById("otpFormElement")?.addEventListener("submit", async function (e) {
     e.preventDefault();
-    
     const btn = e.target.querySelector("button[type='submit']");
     setLoading(btn, true, "Verifying...");
 
-    const userId = document.getElementById("otpUserId").value;
+    const payload = {
+        user_id: document.getElementById("otpUserId").value,
+        otp: document.getElementById("otpInput").value.trim()
+    };
     const purpose = document.getElementById("otpPurpose").value;
-    const otp = document.getElementById("otpInput").value.trim();
-
     const endpoint = purpose === 'register' ? 'verify_registration.php' : 'verify_mfa.php';
 
     try {
         const res = await fetch(`${API_BASE}/${endpoint}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, otp: otp })
+            body: JSON.stringify(payload)
         });
-
         const data = await res.json();
 
         if (data.ok) {
-            showSuccess("Verified! Logging in...");
-            // Save session data
-            localStorage.setItem("user_id", data.user.id);
-            localStorage.setItem("user_name", data.user.username);
-            localStorage.setItem("full_display_name", data.user.name);
-            localStorage.setItem("user_email", data.user.email);
-            
-            // FIX: Redirect to Dashboard
-            setTimeout(() => window.location.href = "dashboard.html", 500);
+            if (purpose === 'register') {
+                showSuccess("Account verified! Please login.");
+                showLogin();
+            } else {
+                console.log("OTP Login Data:", data.user); // Debugging
+                localStorage.setItem("user_id", data.user.id);
+                localStorage.setItem("user_name", data.user.username);
+                localStorage.setItem("user_email", data.user.email);
+                let fName = data.user.first_name || data.user.firstName || data.user.firstname || data.user.Firstname || '';
+                let lName = data.user.last_name || data.user.lastName || data.user.lastname || data.user.Lastname || '';
+                
+                // Fallback: If separate fields are missing, try to split 'name'
+                if (!fName && data.user.name) {
+                    const parts = data.user.name.trim().split(' ');
+                    fName = parts[0];
+                    lName = parts.slice(1).join(' ');
+                }
+                
+                localStorage.setItem("first_name", fName);
+                localStorage.setItem("last_name", lName);
+
+                const fullName = `${fName} ${lName}`.trim();
+                localStorage.setItem("full_display_name", fullName || data.user.full_name || "");
+
+                window.location.href = "dashboard.html";
+            }
         } else {
-            setLoading(btn, false);
             showSuccess(data.error || "Invalid Code");
         }
     } catch (e) {
-        setLoading(btn, false);
         showSuccess("Verification Error");
+    } finally {
+        setLoading(btn, false);
     }
 });
 
 // ===== FORGOT PASSWORD FLOW =====
 async function handleForgotRequest(e) {
     e.preventDefault();
-    const email = document.getElementById("forgotEmail").value.trim();
     const btn = e.target.querySelector("button");
-    btn.disabled = true; btn.innerText = "Sending...";
+    setLoading(btn, true, "Sending...");
+    const email = document.getElementById("forgotEmail").value.trim();
 
     try {
         const res = await fetch(`${API_BASE}/forgot_password.php`, {
@@ -387,21 +404,23 @@ async function handleForgotRequest(e) {
             body: JSON.stringify({ email })
         });
         const data = await res.json();
-        
+
         if(data.ok) {
             tempEmail = email;
-            showSuccess("Code sent! Check your inbox.");
             switchForgotStep(2);
         } else {
-            showSuccess(data.error || "Error sending code");
+            showSuccess(data.error || "Error");
         }
-    } catch(err) { showSuccess("Connection error"); }
-    finally { btn.disabled = false; btn.innerText = "Send Reset Code"; }
+    } catch(err) { showSuccess("Error"); }
+    finally { setLoading(btn, false); }
 }
 
 async function handleForgotVerify(e) {
     e.preventDefault();
+    const btn = e.target.querySelector("button");
+    setLoading(btn, true, "Verifying...");
     const otp = document.getElementById("forgotOtp").value.trim();
+
     try {
         const res = await fetch(`${API_BASE}/verify_reset_otp.php`, {
             method: "POST", headers: { "Content-Type": "application/json" },
@@ -414,51 +433,75 @@ async function handleForgotVerify(e) {
         } else {
             showSuccess(data.error || "Invalid Code");
         }
-    } catch(err) { showSuccess("Connection error"); }
+    } catch(err) { showSuccess("Error"); }
+    finally { setLoading(btn, false); }
 }
 
 async function handleNewPassword(e) {
     e.preventDefault();
-    const newPass = document.getElementById("newPass").value;
-    const confirmPass = document.getElementById("confirmNewPass").value;
-    const token = document.getElementById("resetToken").value;
+    const btn = e.target.querySelector("button");
+    setLoading(btn, true, "Updating...");
 
-    if(newPass !== confirmPass) return showSuccess("Passwords do not match");
+    const payload = {
+        email: tempEmail,
+        reset_token: document.getElementById("resetToken").value,
+        new_password: document.getElementById("newPass").value
+    };
 
     try {
         const res = await fetch(`${API_BASE}/reset_password.php`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: tempEmail, reset_token: token, new_password: newPass })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
         if(data.ok) {
-            showSuccess("Password updated! Please login.");
+            showSuccess("Updated! Please login.");
             setTimeout(() => showLogin(), 2000);
         } else {
-            showSuccess(data.error || "Update failed");
+            showSuccess(data.error || "Failed");
         }
-    } catch(err) { showSuccess("Connection error"); }
+    } catch(err) { showSuccess("Error"); }
+    finally { setLoading(btn, false); }
 }
 
 function switchForgotStep(step) {
-    document.getElementById("forgotStep1").classList.add("hidden");
-    document.getElementById("forgotStep2").classList.add("hidden");
-    document.getElementById("forgotStep3").classList.add("hidden");
-    if(step === 1) document.getElementById("forgotStep1").classList.remove("hidden");
-    if(step === 2) document.getElementById("forgotStep2").classList.remove("hidden");
-    if(step === 3) document.getElementById("forgotStep3").classList.remove("hidden");
+    document.querySelectorAll('[id^="forgotStep"]').forEach(el => el.classList.add("hidden"));
+    document.getElementById(`forgotStep${step}`).classList.remove("hidden");
 }
 
-// ===== UI HELPER: BUTTON LOADING STATE =====
-function setLoading(btn, isLoading, text) {
-    if (isLoading) {
-        btn.dataset.originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${text}`;
-        btn.classList.add("opacity-75", "cursor-not-allowed");
-    } else {
-        btn.disabled = false;
-        btn.innerText = btn.dataset.originalText || "Submit";
-        btn.classList.remove("opacity-75", "cursor-not-allowed");
-    }
+// ===== OTP TIMER & RESEND =====
+function startOtpTimer() {
+    const display = document.getElementById("otpTimerDisplay");
+    const resendBtn = document.getElementById("resendOtpBtn");
+    
+    let duration = 600; 
+    if (window.otpInterval) clearInterval(window.otpInterval);
+    window.otpInterval = setInterval(() => {
+        let m = Math.floor(duration / 60).toString().padStart(2, '0');
+        let s = (duration % 60).toString().padStart(2, '0');
+        if(display) display.innerText = `Expires in ${m}:${s}`;
+        if (--duration < 0) clearInterval(window.otpInterval);
+    }, 1000);
+
+    let cooldown = 60;
+    resendBtn.disabled = true;
+    if (window.resendInterval) clearInterval(window.resendInterval);
+    window.resendInterval = setInterval(() => {
+        resendBtn.innerText = `Resend in ${--cooldown}s`;
+        if (cooldown <= 0) {
+            clearInterval(window.resendInterval);
+            resendBtn.disabled = false;
+            resendBtn.innerText = "Resend Code";
+        }
+    }, 1000);
+}
+
+async function sendOtpAsync(userId, purpose) {
+    try {
+        await fetch(`${API_BASE}/resend_otp.php`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, purpose: purpose })
+        });
+    } catch (e) { console.error(e); }
 }

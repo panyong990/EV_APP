@@ -3,25 +3,23 @@
    BACKEND/API/AUTH/register.php
    =========================== */
 
-// 1. PATH FIX: If auth_middleware is in the SAME folder (AUTH)
-require_once __DIR__ . '/auth_middleware.php'; 
-
-// 2. DATABASE FIX: Looking for Database.php in the CORE folder
-require_once __DIR__ . '/../../CORE/Database.php';
-require_once __DIR__ . '/AuthHelper.php'; // Required for OTP
-
-// Set header to JSON so the browser understands the response
+// 1. ADD CORS HEADERS
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header('Content-Type: application/json');
 
+// 2. HANDLE PREFLIGHT OPTIONS REQUEST
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// 3. CAPTURE DATA
+// 3. INCLUDE DEPENDENCIES
+require_once __DIR__ . '/../../CORE/Database.php';
+require_once __DIR__ . '/AuthHelper.php';
+
+// 4. CAPTURE DATA
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
 $fName = trim($input['firstName'] ?? '');
@@ -33,7 +31,7 @@ $email = trim($input['email'] ?? '');
 $password = $input['password'] ?? '';
 $confirmPass = $input['confirmPassword'] ?? '';
 
-// 4. VALIDATION
+// 5. VALIDATION
 if (empty($customUsername) || empty($fullName) || empty($email) || empty($password)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'All fields are required.']);
@@ -92,6 +90,7 @@ try {
     $otp = AuthHelper::generateOTP();
     AuthHelper::storeOTP($db, $userId, 'register', $otp);
     
+    // Send Email via AuthHelper (which now uses SMTP from .env)
     if (!AuthHelper::sendEmail($email, "Energo Account Verification Code", "Your Energo verification code is: $otp")) {
         $db->rollBack();
         http_response_code(500);

@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../../CORE/Database.php';
+require_once __DIR__ . '/AuthHelper.php';
 
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $email = trim($input['email'] ?? '');
@@ -61,4 +62,3 @@ try {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'Database connection error']);
 }
-?>
