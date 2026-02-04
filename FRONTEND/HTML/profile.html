@@ -364,20 +364,6 @@
 
                 <div class="h-px bg-white/40 dark:bg-white/10"></div>
 
-                <!-- Prominent primary action: Write a review -->
-                <div class="px-4 py-3">
-                  <button
-                    id="openFeedbackBtn"
-                    type="button"
-                    class="w-full rounded-2xl bg-gradient-to-r from-black/90 to-black/70 text-white py-3 text-sm font-semibold shadow-md flex items-center justify-center gap-2 hover:scale-[1.01] transition-transform"
-                  >
-                    <i data-lucide="star" class="h-4 w-4"></i>
-                    Write a review
-                  </button>
-                </div>
-
-                <div class="h-px bg-white/40 dark:bg-white/10"></div>
-
                 <button
                   type="button"
                   id="openHelpBtn"
@@ -689,25 +675,25 @@
 
         <form id="feedbackForm" class="mt-4 space-y-3">
           <div class="flex items-center justify-center gap-5" role="group" aria-label="Rating (1-5 stars)">
-            <button type="button" data-star="1" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="1 star">
-              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-300 dark:text-slate-500 transition-opacity duration-200"></i>
-              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-700/60 dark:text-amber-700/50 transition-opacity duration-200 opacity-0"></i>
+            <button type="button" data-star="1" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="1 star, rate this option">
+              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-400 dark:text-slate-400 transition-opacity duration-200"></i>
+              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-500 dark:text-amber-400 transition-opacity duration-200 opacity-0"></i>
             </button>
-            <button type="button" data-star="2" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="2 stars">
-              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-300 dark:text-slate-500 transition-opacity duration-200"></i>
-              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-700/60 dark:text-amber-700/50 transition-opacity duration-200 opacity-0"></i>
+            <button type="button" data-star="2" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="2 stars, rate this option">
+              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-400 dark:text-slate-400 transition-opacity duration-200"></i>
+              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-500 dark:text-amber-400 transition-opacity duration-200 opacity-0"></i>
             </button>
-            <button type="button" data-star="3" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="3 stars">
-              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-300 dark:text-slate-500 transition-opacity duration-200"></i>
-              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-700/60 dark:text-amber-700/50 transition-opacity duration-200 opacity-0"></i>
+            <button type="button" data-star="3" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="3 stars, rate this option">
+              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-400 dark:text-slate-400 transition-opacity duration-200"></i>
+              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-500 dark:text-amber-400 transition-opacity duration-200 opacity-0"></i>
             </button>
-            <button type="button" data-star="4" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="4 stars">
-              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-300 dark:text-slate-500 transition-opacity duration-200"></i>
-              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-700/60 dark:text-amber-700/50 transition-opacity duration-200 opacity-0"></i>
+            <button type="button" data-star="4" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="4 stars, rate this option">
+              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-400 dark:text-slate-400 transition-opacity duration-200"></i>
+              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-500 dark:text-amber-400 transition-opacity duration-200 opacity-0"></i>
             </button>
-            <button type="button" data-star="5" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="5 stars">
-              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-300 dark:text-slate-500 transition-opacity duration-200"></i>
-              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-700/60 dark:text-amber-700/50 transition-opacity duration-200 opacity-0"></i>
+            <button type="button" data-star="5" class="star-btn relative inline-flex items-center justify-center p-2 rounded-full transition-all duration-200" aria-label="5 stars, rate this option">
+              <i data-lucide="star" class="star-outline absolute h-8 w-8 text-slate-400 dark:text-slate-400 transition-opacity duration-200"></i>
+              <i data-lucide="star" class="star-fill absolute h-8 w-8 text-amber-500 dark:text-amber-400 transition-opacity duration-200 opacity-0"></i>
             </button>
           </div>
 
@@ -757,18 +743,43 @@
         cursor: pointer;
         background: transparent;
         border: none;
+        padding: 0.5rem;
         transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+      }
+
+      /* Hover state: scale up and add subtle background highlight */
+      #feedbackModal .star-btn:hover {
+        transform: scale(1.15);
+        background: rgba(217, 119, 6, 0.08);
+        border-radius: 50%;
+      }
+
+      #feedbackModal .star-btn:focus-visible {
+        outline: 2px solid #d97706;
+        outline-offset: 2px;
+        border-radius: 50%;
       }
 
       /* Default state: outline visible, fill hidden */
       #feedbackModal .star-btn .star-outline {
         opacity: 1;
-        transition: opacity 200ms ease;
+        transition: opacity 200ms ease, color 200ms ease;
       }
 
       #feedbackModal .star-btn .star-fill {
         opacity: 0; /* Hidden by default */
-        transition: opacity 200ms ease;
+        transition: opacity 200ms ease, color 200ms ease;
+      }
+
+      /* Hover state: brighten outline */
+      #feedbackModal .star-btn:hover .star-outline {
+        color: #94a3b8;
+        opacity: 0.6;
+      }
+
+      #feedbackModal .star-btn:hover .star-fill {
+        opacity: 0.3;
       }
 
       /* When star is selected (active class): show fill, hide outline */
@@ -778,6 +789,12 @@
 
       #feedbackModal .star-btn.active .star-fill {
         opacity: 1; /* Show fill when active - continuous across all selected stars */
+      }
+
+      /* Active state hover: maintain visibility */
+      #feedbackModal .star-btn.active:hover {
+        transform: scale(1.2);
+        filter: brightness(1.1);
       }
 
       /* Category Dropdown Styles */
