@@ -19,7 +19,12 @@ async function fetchAnalyticsData() {
     
     // Update charts
     updateTripsChart(data.trips_by_location);
-    updateStationsChart(data.charging_by_region);
+    // Prefer sessions-per-station if available, otherwise fall back to station counts by region
+    if (data.charging_sessions_by_station && Array.isArray(data.charging_sessions_by_station) && data.charging_sessions_by_station.length) {
+      updateStationsChart(data.charging_sessions_by_station, { type: 'sessions' });
+    } else {
+      updateStationsChart(data.charging_by_region, { type: 'stations' });
+    }
     
   } catch (error) {
     console.error('Error fetching analytics:', error);
@@ -107,9 +112,14 @@ function updateTripsChart(tripsData) {
 }
 
 // Update Stations Chart with real data
-function updateStationsChart(stationsData) {
-  const labels = stationsData.map(item => item.region || item.operator_name || 'Station');
-  const data = stationsData.map(item => item.station_count);
+function updateStationsChart(stationsData, opts = {}) {
+  const mode = opts.type || 'stations';
+  const labels = stationsData.map(item => item.station_name || item.region || item.operator_name || 'Station');
+  const data = stationsData.map(item => {
+    // support multiple field names
+    if (mode === 'sessions') return Number(item.sessions_count || item.sessions || item.count || item.station_count || 0);
+    return Number(item.station_count || item.count || item.sessions_count || 0);
+  });
   
   const stationsCtx = document.getElementById("stationsChart").getContext('2d');
   const stationsOpts = JSON.parse(JSON.stringify(commonOptions));
@@ -124,10 +134,10 @@ function updateStationsChart(stationsData) {
       labels: labels,
       datasets: [
         {
-          label: "Charging Stations",
+          label: mode === 'sessions' ? "Charging Sessions (per station)" : "Charging Stations",
           data: data,
-          backgroundColor: "#10b981",
-          hoverBackgroundColor: "#047857",
+          backgroundColor: mode === 'sessions' ? "#10b981" : "#60a5fa",
+          hoverBackgroundColor: mode === 'sessions' ? "#047857" : "#2563eb",
           barPercentage: 0.6,
           categoryPercentage: 0.7,
           borderRadius: 6,
