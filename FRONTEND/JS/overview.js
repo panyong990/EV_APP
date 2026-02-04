@@ -1,4 +1,6 @@
 // API Configuration
+// Ensure only admin can access this page
+try { requireRole(['admin']); } catch(e) { /* guard not loaded yet */ }
 const API_BASE_URL = 'http://localhost/EV_APP/BACKEND/API';
 
 // Global chart instance for updating
@@ -102,14 +104,22 @@ function updateGrowthChart(monthlyData) {
   }
 
   // Create new chart
-  const growthCtx = document.getElementById("growthChart").getContext('2d');
+  const growthEl = document.getElementById("growthChart");
+  if (!growthEl) {
+    console.warn('Growth chart canvas not found: #growthChart');
+    return;
+  }
+  growthEl.style.width = '100%';
+  growthEl.style.height = '100%';
+  const growthCtx = growthEl.getContext('2d');
 
   // Create gradient
   const gradient = growthCtx.createLinearGradient(0, 0, 0, 300);
   gradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
   gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
-  growthChartInstance = new Chart(growthCtx, {
+  try {
+    growthChartInstance = new Chart(growthCtx, {
     type: "line",
     data: {
       labels: months,
@@ -152,7 +162,42 @@ function updateGrowthChart(monthlyData) {
       },
       interaction: { mode: 'index', intersect: false }
     }
-  });
+    });
+  } catch (err) {
+    console.warn('Chart.js failed to render growth chart, using fallback', err);
+    renderGrowthFallback(monthlyData);
+  }
+}
+
+// If Chart.js fails to initialize, render a simple SVG fallback bar visualization
+function renderGrowthFallback(monthlyData) {
+  const container = document.getElementById('growthChart')?.parentElement;
+  if (!container) return;
+  try {
+    const max = Math.max(...monthlyData.map(m => parseInt(m.users) || 0), 1);
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', '100%');
+    svg.setAttribute('viewBox', '0 0 100 30');
+    const barWidth = 100 / monthlyData.length;
+    monthlyData.forEach((m, i) => {
+      const h = (parseInt(m.users) || 0) / max * 25;
+      const rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x', (i * barWidth + 1).toString());
+      rect.setAttribute('y', (30 - h).toString());
+      rect.setAttribute('width', (barWidth - 2).toString());
+      rect.setAttribute('height', h.toString());
+      rect.setAttribute('fill', '#3b82f6');
+      svg.appendChild(rect);
+    });
+    // remove canvas and append fallback
+    const canvas = document.getElementById('growthChart');
+    canvas.style.display = 'none';
+    if (!container.querySelector('svg')) container.appendChild(svg);
+  } catch (e) {
+    console.warn('Failed to render fallback growth chart', e);
+  }
 }
 
 // Initialize

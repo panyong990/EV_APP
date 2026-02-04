@@ -251,7 +251,7 @@
         <i data-lucide="layout-dashboard" class="menu-icon"></i>
         <span>Overview</span>
       </a>
-      <a href="#" class="menu-item active">
+      <a href="users.html" class="menu-item active">
         <i data-lucide="users" class="menu-icon"></i>
         <span>Users</span>
       </a>
@@ -315,6 +315,8 @@
   </main>
 
   <!-- Users Page Script -->
+  <script src="../JS/auth_guard.js"></script>
+  <script>try{ requireRole(['admin']); }catch(e){}</script>
   <script src="../JS/users.js"></script>
   <script>
     lucide.createIcons();

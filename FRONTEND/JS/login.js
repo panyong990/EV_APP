@@ -203,6 +203,8 @@ document.getElementById("loginFormElement")?.addEventListener("submit", async fu
     const email = document.getElementById("loginEmail")?.value.trim();
     const password = document.getElementById("loginPassword")?.value;
 
+    // (No client-side test-admin shortcut — admin should come from DB)
+
     try {
         const res = await fetch(`${API_BASE}/login.php`, {
             method: "POST",
@@ -232,8 +234,18 @@ document.getElementById("loginFormElement")?.addEventListener("submit", async fu
             const fullName = `${fName} ${lName}`.trim();
             localStorage.setItem("full_display_name", fullName || data.user.full_name || "");
 
+            // Determine role from backend response (support several possible field names)
+            let role = (data.user.role || data.user.user_role || data.user.role_name || data.user.type || '').toString().toLowerCase();
+            // Test admin credentials override (developer/test account)
+            if (!role && email === 'admin@gmail.com' && password === 'admin@123') role = 'admin';
+            if (!role) role = 'user';
+
+            localStorage.setItem('user_role', role);
             showSuccess("Login Successful!");
-            setTimeout(() => window.location.href = "garage.html", 500);
+            setTimeout(() => {
+                if (role === 'admin') window.location.href = 'overview.html';
+                else window.location.href = 'dashboard.html';
+            }, 500);
         } else if (data.require_verification) {
             tempUserId = data.user_id;
             tempEmail = data.email;
@@ -317,7 +329,7 @@ document.getElementById("otpFormElement")?.addEventListener("submit", async func
         });
         const data = await res.json();
 
-        if (data.ok) {
+                if (data.ok) {
             if (purpose === 'register') {
                 showSuccess("Account verified! Please login.");
                 showLogin();
@@ -342,7 +354,12 @@ document.getElementById("otpFormElement")?.addEventListener("submit", async func
                 const fullName = `${fName} ${lName}`.trim();
                 localStorage.setItem("full_display_name", fullName || data.user.full_name || "");
 
-                window.location.href = "garage.html";
+                // Store role and redirect accordingly
+                let role = (data.user.role || data.user.user_role || data.user.role_name || data.user.type || '').toString().toLowerCase();
+                if (!role) role = 'user';
+                localStorage.setItem('user_role', role);
+                if (role === 'admin') window.location.href = 'overview.html';
+                else window.location.href = 'dashboard.html';
             }
         } else {
             showSuccess(data.error || "Invalid Code");

@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   floatingBtn?.addEventListener('click', openModal);
   feedbackClose?.addEventListener('click', closeModal);
 
-  feedbackForm?.addEventListener('submit', (e) => {
+  feedbackForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     // Validate: rating required
     const rating = Number(ratingInput.value || 0);
@@ -95,40 +95,65 @@ document.addEventListener('DOMContentLoaded', () => {
       feedbackTextarea.value = feedbackTextarea.value.slice(0, 500);
     }
 
-    // Build feedback object (anonymous)
-    const feedbackObj = {
-      rating: rating,
-      text: (feedbackTextarea && feedbackTextarea.value) ? feedbackTextarea.value.trim() : '',
-      category: (categoryInput && categoryInput.value) ? categoryInput.value : '',
-      created_at: new Date().toISOString(),
-      reviewed: false
-    };
-
-    // Persist locally so admin view can pick it up (anonymous)
-    try {
-      const existing = JSON.parse(localStorage.getItem('user_feedbacks') || '[]');
-      existing.push(feedbackObj);
-      localStorage.setItem('user_feedbacks', JSON.stringify(existing));
-    } catch (err) {
-      console.warn('Unable to persist feedback locally', err);
+    const text = (feedbackTextarea && feedbackTextarea.value) ? feedbackTextarea.value.trim() : '';
+    if (!text) {
+      feedbackMessage.textContent = 'Please provide feedback text.';
+      feedbackMessage.classList.add('error');
+      return;
     }
 
-    // Show subtle success confirmation and close modal
-    feedbackMessage.textContent = 'Thanks — your feedback was received.';
-    feedbackMessage.classList.remove('error');
-    feedbackMessage.classList.add('success');
+    const category = (categoryInput && categoryInput.value) ? categoryInput.value : '';
 
-    setTimeout(() => {
-      closeModal();
-      // small ephemeral toast
-      const toast = document.createElement('div');
-      toast.className = 'feedback-toast';
-      toast.textContent = 'Feedback submitted. Thank you!';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.classList.add('show'), 10);
-      setTimeout(() => toast.classList.remove('show'), 2400);
-      setTimeout(() => document.body.removeChild(toast), 2800);
-    }, 700);
+    // Show loading state
+    feedbackMessage.textContent = 'Submitting feedback...';
+    feedbackMessage.classList.remove('error', 'success');
+
+    try {
+      // Send feedback to backend API
+      const response = await fetch('/EV_APP/BACKEND/API/FEEDBACK/add_feedback.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rating: rating,
+          text: text,
+          category: category
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        feedbackMessage.textContent = data.error || 'Failed to submit feedback';
+        feedbackMessage.classList.add('error');
+        feedbackMessage.classList.remove('success');
+        return;
+      }
+
+      // Show subtle success confirmation and close modal
+      feedbackMessage.textContent = 'Thanks — your feedback was received.';
+      feedbackMessage.classList.remove('error');
+      feedbackMessage.classList.add('success');
+
+      setTimeout(() => {
+        closeModal();
+        // small ephemeral toast
+        const toast = document.createElement('div');
+        toast.className = 'feedback-toast';
+        toast.textContent = 'Feedback submitted. Thank you!';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => toast.classList.remove('show'), 2400);
+        setTimeout(() => document.body.removeChild(toast), 2800);
+      }, 700);
+
+    } catch (err) {
+      console.error('Error submitting feedback:', err);
+      feedbackMessage.textContent = 'Network error. Please try again.';
+      feedbackMessage.classList.add('error');
+      feedbackMessage.classList.remove('success');
+    }
   });
 
   // close on overlay click

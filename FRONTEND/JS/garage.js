@@ -1,4 +1,5 @@
 // ===== AUTH GUARD =====
+try { requireRole(['user']); } catch(e) { /* guard not loaded */ }
 const USER_ID = localStorage.getItem("user_id");
 if (!USER_ID) {
   window.location.href = "login.html";

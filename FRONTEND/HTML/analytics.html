@@ -39,7 +39,7 @@
         <i data-lucide="users" class="menu-icon"></i>
         <span>Users</span>
       </a>
-      <a href="#" class="menu-item active">
+      <a href="analytics.html" class="menu-item active">
         <i data-lucide="bar-chart-2" class="menu-icon"></i>
         <span>Analytics</span>
       </a>
@@ -117,6 +117,8 @@
   </main>
 
   <!-- Page Script -->
+  <script src="../JS/auth_guard.js"></script>
+  <script>try{ requireRole(['admin']); }catch(e){}</script>
   <script src="../JS/analytics.js"></script>
   <script>
     lucide.createIcons();

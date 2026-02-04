@@ -17,6 +17,10 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
+-- Ensure database exists for XAMPP imports
+CREATE DATABASE IF NOT EXISTS `ev_app_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `ev_app_db`;
+
 --
 -- Database: `ev_app_db`
 --
@@ -570,6 +574,13 @@ INSERT INTO `users` (`id`, `username`, `name`, `email`, `password_hash`, `create
 (14, 'burikak', 'Alexa Nicolas', 'nicolas.alexaven@gmail.com', '$2y$10$R1kRu3GovdAuQvVa3wEjlOTJk70foNJekXTtwXGpEQ.VhDW8ijl52', '2026-01-23 05:58:59', '2026-02-01 11:26:49', NULL, 0, 'km', 0, 1);
 
 -- --------------------------------------------------------
+
+-- Add admin role column (if missing) and seed a test admin user
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `role` varchar(20) NOT NULL DEFAULT 'user';
+
+-- Test admin user (email: admin@gmail.com / password: admin@123)
+INSERT INTO `users` (`id`, `username`, `name`, `email`, `password_hash`, `created_at`, `updated_at`, `phone`, `pref_dark`, `pref_units`, `is_verified`, `mfa_enabled`, `role`) VALUES
+(99, 'admin', 'Admin', 'admin@gmail.com', '$2y$10$aRSRimT/wVkmi8tQCy.VqOMbPCpU9bOSYNGzY1h1U6OdqjtvnRcLC', '2026-02-04 00:00:00', '2026-02-04 00:00:00', NULL, 0, 'km', 1, 1, 'admin');
 
 --
 -- Table structure for table `user_favorites`

@@ -1,12 +1,15 @@
-// Feedbacks admin page script
+// Feedbacks admin page script (scoped / compatible with combined admin-panel)
 document.addEventListener('DOMContentLoaded', () => {
-  const feedbacksTableBody = document.getElementById('feedbacksTableBody');
-  const emptyState = document.getElementById('emptyState');
-  const searchInput = document.getElementById('searchInput');
-  const ratingFilter = document.getElementById('ratingFilter');
-  const sortBy = document.getElementById('sortBy');
-  const totalFeedbacksCount = document.getElementById('totalFeedbacksCount');
-  const avgRatingDisplay = document.getElementById('avgRating');
+  const root = document.querySelector('#feedbacks') || document;
+  const tableBody = root.querySelector('#feedbacksTableBody') || document.getElementById('feedbacksTableBody');
+  const emptyState = root.querySelector('#emptyState') || document.getElementById('emptyState');
+  const searchInput = root.querySelector('#feedback_searchInput') || document.getElementById('searchInput');
+  const ratingFilter = root.querySelector('#feedback_ratingFilter') || document.getElementById('ratingFilter');
+  const sortBy = root.querySelector('#feedback_sortBy') || document.getElementById('sortBy');
+  const totalFeedbacksCount = root.querySelector('#totalFeedbacksCount') || document.getElementById('totalFeedbacksCount');
+  const avgRatingDisplay = root.querySelector('#avgRating') || document.getElementById('avgRating');
+
+  if (!tableBody) return;
 
   let allFeedbacks = [];
 
@@ -19,12 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     'analytics': 'Analytics'
   };
 
-  // Load feedbacks from API
   async function loadFeedbacks() {
     try {
-      const res = await fetch('/BACKEND/API/FEEDBACK/get_all_feedbacks.php');
+      const res = await fetch('/EV_APP/BACKEND/API/FEEDBACK/get_all_feedbacks.php');
       if (!res.ok) {
-        console.warn('Feedbacks API returned non-ok response, falling back to local only');
+        console.warn('Feedbacks API returned non-ok response, falling back to empty');
         allFeedbacks = [];
       } else {
         const data = await res.json();
@@ -35,25 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
       allFeedbacks = [];
     }
 
-    // Merge locally-submitted anonymous feedbacks from localStorage
-    try {
-      const local = JSON.parse(localStorage.getItem('user_feedbacks') || '[]');
-      if (Array.isArray(local) && local.length) {
-        allFeedbacks = allFeedbacks.concat(local.map(f => ({
-          rating: f.rating || 0,
-          text: f.text || '',
-          category: f.category || '',
-          created_at: f.created_at || new Date().toISOString(),
-          reviewed: f.reviewed || false
-        })));
-      }
-    } catch (err) {
-      console.warn('Could not read local feedbacks', err);
-    }
-
     updateStats();
     displayFeedbacks();
   }
+
   // Update summary statistics
   function updateStats() {
     const total = allFeedbacks.length;
@@ -62,18 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
       ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
       : 0;
 
-    totalFeedbacksCount.textContent = total;
-    avgRatingDisplay.textContent = avgRating;
+    if (totalFeedbacksCount) totalFeedbacksCount.textContent = total;
+    if (avgRatingDisplay) avgRatingDisplay.textContent = avgRating;
   }
 
   // Sort feedbacks based on selected sort option
   function sortFeedbacks(feedbacks) {
     const sorted = [...feedbacks];
-    const sortValue = sortBy.value;
+    const sortValue = sortBy?.value || '';
 
-    if (sortValue === 'date-desc') {
+    if (sortValue === 'date-desc' || sortValue === 'newest') {
       sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (sortValue === 'date-asc') {
+    } else if (sortValue === 'date-asc' || sortValue === 'oldest') {
       sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     } else if (sortValue === 'rating-desc') {
       sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -86,8 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Display feedbacks in table format with filters
   function displayFeedbacks() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const selectedRating = ratingFilter.value;
+    const searchTerm = (searchInput?.value || '').toLowerCase();
+    const selectedRating = ratingFilter?.value || '';
 
     let filtered = allFeedbacks.filter(feedback => {
       const matchesSearch = feedback.text && feedback.text.toLowerCase().includes(searchTerm);
@@ -103,21 +90,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    emptyState.style.display = 'none';
-    feedbacksTableBody.innerHTML = filtered.map(feedback => createTableRow(feedback)).join('');
+    if (emptyState) emptyState.style.display = 'none';
+    tableBody.innerHTML = filtered.map(feedback => createTableRow(feedback)).join('');
   }
 
   // Show empty state
   function showEmptyState(message) {
-    emptyState.style.display = 'block';
-    emptyState.querySelector('p').textContent = message;
-    feedbacksTableBody.innerHTML = '';
+    if (emptyState) {
+      emptyState.style.display = 'block';
+      emptyState.querySelector('p').textContent = message;
+    }
+    tableBody.innerHTML = '';
   }
 
   // Create table row for feedback
   function createTableRow(feedback) {
     const rating = parseInt(feedback.rating) || 0;
-    // Show numeric rating with a single muted star for readability
     const ratingDisplay = `
       <span style="display:inline-flex; align-items:center; gap:8px; color: #6b7280; font-weight:600;">
         <span style="font-size:0.95rem;">${rating}</span>
@@ -126,66 +114,38 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     const date = new Date(feedback.created_at || new Date());
-    const dateStr = date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric'
-    });
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    // Prefer explicit category submitted from the feedback modal; fall back to mapped source
     const categoryDisplay = feedback.category || sourceMap[feedback.source?.toLowerCase()] || feedback.source || 'App';
     const status = feedback.reviewed ? 'Reviewed' : 'New';
     const statusColor = feedback.reviewed ? '#6b7280' : '#2563eb';
     const statusBgColor = feedback.reviewed ? '#f3f4f6' : '#eff6ff';
 
     const feedbackText = escapeHtml(feedback.text || '(No comment)');
-    const truncatedText = feedbackText.length > 100 
-      ? feedbackText.substring(0, 100) + '...' 
-      : feedbackText;
+    const truncatedText = feedbackText.length > 100 ? feedbackText.substring(0, 100) + '...' : feedbackText;
 
     return `
-      <tr style="border-bottom: 1px solid #e5e7eb; hover-background: #f9fafb;">
-        <td style="text-align: center; padding: 12px 0; color: #6b7280;">
-          ${ratingDisplay}
-        </td>
-        <td style="text-align: left; padding: 12px 0; color: #374151; font-size: 0.9375rem;" title="${feedbackText}">
-          ${truncatedText}
-        </td>
-        <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">
-          ${escapeHtml(categoryDisplay)}
-        </td>
-        <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">
-          ${dateStr}<br><span style="font-size: 0.8125rem; color: #9ca3af;">${timeStr}</span>
-        </td>
-        <td style="text-align: center; padding: 12px 0;">
-          <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8125rem; font-weight: 500; background-color: ${statusBgColor}; color: ${statusColor};">
-            ${status}
-          </span>
-        </td>
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="text-align: center; padding: 12px 0; color: #6b7280;">${ratingDisplay}</td>
+        <td style="text-align: left; padding: 12px 0; color: #374151; font-size: 0.9375rem;" title="${feedbackText}">${truncatedText}</td>
+        <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">${escapeHtml(categoryDisplay)}</td>
+        <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">${dateStr}<br><span style="font-size: 0.8125rem; color: #9ca3af;">${timeStr}</span></td>
+        <td style="text-align: center; padding: 12px 0;"><span style="display:inline-block; padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.8125rem; font-weight:500; background-color:${statusBgColor}; color:${statusColor};">${status}</span></td>
       </tr>
     `;
   }
 
   // Escape HTML to prevent XSS
   function escapeHtml(text) {
-    const map = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
   }
 
   // Event listeners for filters and sorting
-  searchInput.addEventListener('input', displayFeedbacks);
-  ratingFilter.addEventListener('change', displayFeedbacks);
-  sortBy.addEventListener('change', displayFeedbacks);
+  searchInput?.addEventListener('input', displayFeedbacks);
+  ratingFilter?.addEventListener('change', displayFeedbacks);
+  sortBy?.addEventListener('change', displayFeedbacks);
 
   // Initial load
   loadFeedbacks();

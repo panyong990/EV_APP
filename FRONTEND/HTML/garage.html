@@ -13,6 +13,7 @@
         }
         tailwind.config = { darkMode: 'class' };
     </script>
+    <script src="../JS/auth_guard.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -182,8 +183,7 @@
         const DIST_LABEL = PREF_UNIT === 'MILES' ? 'mi' : 'km';
 
         document.addEventListener("DOMContentLoaded", () => {
-            if(!localStorage.getItem("user_id")) window.location.href = "login.html";
-            if(!USER_ID) window.location.href = "login.html";
+            try { requireRole(['user']); } catch(e) { if(!localStorage.getItem('user_id')) window.location.href = 'login.html'; }
             renderGarage();
         });
 
