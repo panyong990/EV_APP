@@ -23,6 +23,44 @@
         /* Hide scrollbar for horizontal tabs on mobile */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Arrival Toast Animation */
+        #arrival-toast {
+            animation: slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        #arrival-toast.hidden {
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+        }
+
+        /* Remove number input spinner controls */
+        #arrival-battery-input::-webkit-outer-spin-button,
+        #arrival-battery-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #arrival-battery-input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body>
@@ -191,7 +229,53 @@
         </div>
     </div>
 
-    <!-- Arrival Modal -->
+    <!-- Arrival Notification Toast (Lightweight) -->
+    <div id="arrival-toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-[6000] hidden items-center gap-3 px-5 py-3 bg-white border border-green-200 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300">
+        <i class="fa-solid fa-check-circle text-xl text-green-600"></i>
+        <span class="text-sm font-semibold text-gray-900">You have arrived at your destination</span>
+    </div>
+
+    <!-- Battery Input Modal (System-matched styling) -->
+    <div id="battery-modal" class="fixed inset-0 z-[6000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm hidden">
+        <div class="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden p-6 text-center">
+            <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <i class="fa-solid fa-battery-half text-2xl text-emerald-600"></i>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Update Battery Level</h2>
+            <p class="text-gray-500 mb-6 text-sm">Please enter your current battery percentage to continue</p>
+
+            <form id="battery-input-form" onsubmit="confirmBatteryUpdate(event)" class="space-y-5">
+                <div>
+                    <div class="flex items-center justify-center gap-0 mb-2">
+                        <input 
+                            id="arrival-battery-input" 
+                            type="number" 
+                            min="0" 
+                            max="100" 
+                            inputmode="numeric" 
+                            placeholder="0" 
+                            class="w-20 px-3 py-3 border border-gray-200 rounded-lg text-center text-3xl font-black text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" 
+                            required 
+                        />
+                        <span class="text-3xl font-black text-gray-500 ml-2">%</span>
+                    </div>
+                    <div id="battery-input-error" class="text-xs text-red-600 hidden mt-1">Battery must be between 0 and 100</div>
+                </div>
+
+                <div class="flex gap-3 pt-3">
+                    <button type="button" onclick="closeBatteryModal()" class="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 rounded-2xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black transition shadow-lg transform active:scale-95">
+                        Confirm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Arrival Modal (Legacy - kept for reference) -->
     <div id="arrival-modal" class="fixed inset-0 z-[6000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm hidden">
         <div class="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden p-6 text-center">
             <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
@@ -429,10 +513,84 @@
         }
 
         function showArrivalNotification() {
-            document.getElementById('arrival-modal').classList.remove('hidden');
+            // 1. Show lightweight notification toast
+            const toast = document.getElementById('arrival-toast');
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            
+            // Auto-hide toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 3000);
+            
+            // 2. After 1.5 seconds, show battery input modal
+            setTimeout(() => {
+                showBatteryModal();
+            }, 1500);
+        }
+
+        function showBatteryModal() {
+            const modal = document.getElementById('battery-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('arrival-battery-input').focus();
+        }
+
+        function closeBatteryModal() {
+            const modal = document.getElementById('battery-modal');
+            modal.classList.add('hidden');
+            // Auto-finish trip after 500ms
+            setTimeout(() => {
+                finishTrip();
+            }, 500);
+        }
+
+        function confirmBatteryUpdate(event) {
+            event.preventDefault();
+            const input = document.getElementById('arrival-battery-input');
+            const errorDiv = document.getElementById('battery-input-error');
+            const batteryValue = parseInt(input.value);
+            
+            // Validate battery input
+            if (isNaN(batteryValue) || batteryValue < 0 || batteryValue > 100) {
+                errorDiv.classList.remove('hidden');
+                input.focus();
+                return;
+            }
+            
+            errorDiv.classList.add('hidden');
+            
+            // Update battery state in localStorage and Trip Planner
+            updateBatteryStateAfterArrival(batteryValue);
+            
+            // Close modal and finish trip
+            closeBatteryModal();
+        }
+
+        function updateBatteryStateAfterArrival(batteryPercentage) {
+            try {
+                // 1. Update global battery state in localStorage
+                localStorage.setItem('user_battery_level', batteryPercentage);
+                
+                // 2. Update Trip Planner's battery input (for consistency across pages)
+                const tripData = localStorage.getItem('activeTrip');
+                if (tripData) {
+                    const trip = JSON.parse(tripData);
+                    // Update the trip's current battery for next navigation
+                    trip.current_battery = batteryPercentage;
+                    localStorage.setItem('activeTrip', JSON.stringify(trip));
+                }
+                
+                console.log(`Battery state updated to ${batteryPercentage}%`);
+            } catch (e) {
+                console.error('Error updating battery state:', e);
+            }
         }
 
         function finishTrip() {
+            // Clear active trip and navigation state
+            localStorage.removeItem('activeTrip');
+            // Redirect back to Trip Planner with updated battery state
             window.location.href = "trip_planner.html";
         }
 

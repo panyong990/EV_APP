@@ -56,7 +56,7 @@
         border: 1px solid #e5e7eb;
         border-radius: 16px;
         padding: 16px;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         cursor: pointer;
         transition: 0.2s;
         display: flex;
@@ -181,7 +181,7 @@
       </div>
 
       <div class="panel-scroll no-scrollbar px-4 pb-20 space-y-3 md:px-5 md:pb-4 md:space-y-4" id="panel-scroll">
-        <section class="search-section search-area">
+        <section class="search-section search-area space-y-2">
             <div class="suggest-wrap">
                 <div class="input-icon-box relative">
                   <i data-lucide="search"></i>
@@ -193,14 +193,16 @@
                 <div id="search-suggest" class="suggest-list"></div>
             </div>
             
-            <div class="flex gap-2 mt-3 flex-wrap">
+            <div class="flex gap-2 flex-wrap">
                 <div class="filter-chip active" onclick="toggleFilter(this, 'all')">All</div>
                 <div class="filter-chip" onclick="toggleFilter(this, 'Favorites')">❤️ Favorites</div>
             </div>
+
+            <p class="text-xs text-gray-500 dark:text-gray-400 pb-2 border-b border-gray-200 dark:border-gray-700">Showing stations within 50 miles of your location</p>
         </section>
 
         <div id="results-list" class="results-list">
-            <div class="text-center mt-10 text-gray-400 text-sm">
+            <div class="text-center mt-6 text-gray-400 text-sm">
                 <i class="fa-solid fa-map-location-dot text-4xl mb-2 opacity-50"></i>
                 <p>Search a location to find chargers.</p>
             </div>
