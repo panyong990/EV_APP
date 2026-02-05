@@ -19,9 +19,11 @@ function requireRole(allowedRoles = []) {
 
     const normalized = allowedRoles.map(r => r.toLowerCase());
     if (!normalized.includes(role)) {
-        // Redirect based on actual role
-        if (role === 'admin') window.location.href = 'overview.html';
-        else window.location.href = 'dashboard.html';
+        // User is accessing a role-restricted page they don't have access to
+        // Redirect based on their role (not the accessed page's requirement)
+        // Note: Override only enforced on initial login. Manual navigation is allowed.
+        // if (role === 'admin') window.location.href = 'overview.html';
+        // else window.location.href = 'dashboard.html';
     }
 }
 

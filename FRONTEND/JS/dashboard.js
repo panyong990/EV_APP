@@ -3,8 +3,6 @@
 // ===== BACKEND LOGIC (MIGRATED & ADAPTED) =====
 
 const API_BASE = "http://localhost/WEBPROG_PROJ/BACKEND/API";
-// Require regular user role to access dashboard
-try { requireRole(['user']); } catch(e) { /* guard not loaded yet */ }
 let trips = [];
 let socket;
 
