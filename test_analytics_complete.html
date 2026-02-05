@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .container { max-width: 1000px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        canvas { max-width: 100%; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Analytics Data Test</h1>
+        
+        <div class="section">
+            <h2>1. Fetch Analytics Data</h2>
+            <button onclick="fetchAnalytics()">Fetch Data</button>
+            <div id="analyticsStatus"></div>
+            <pre id="analyticsData"></pre>
+        </div>
+        
+        <div class="section">
+            <h2>2. Charging Sessions by Station Chart</h2>
+            <canvas id="stationsChart" width="400" height="200"></canvas>
+        </div>
+        
+        <div class="section">
+            <h2>3. Test Recording a Session</h2>
+            <button onclick="testRecordSession()">Record Test Session</button>
+            <div id="recordStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        let stationsChartInstance = null;
+        
+        async function fetchAnalytics() {
+            const statusEl = document.getElementById('analyticsStatus');
+            const dataEl = document.getElementById('analyticsData');
+            
+            try {
+                statusEl.innerHTML = '<p style="color: blue;">Fetching...</p>';
+                const response = await fetch('/EV_APP/BACKEND/API/ANALYTICS/get_analytics_data.php');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                statusEl.innerHTML = '<p class="success">✓ Data fetched successfully</p>';
+                dataEl.textContent = JSON.stringify(data, null, 2);
+                
+                // Display charging sessions by station
+                if (data.charging_sessions_by_station && data.charging_sessions_by_station.length > 0) {
+                    displayChart(data.charging_sessions_by_station);
+                    statusEl.innerHTML += '<p class="success">✓ Found ' + data.charging_sessions_by_station.length + ' stations with sessions</p>';
+                } else {
+                    statusEl.innerHTML += '<p style="color: orange;">⚠ No charging sessions found</p>';
+                }
+                
+                // Show total charging sessions
+                statusEl.innerHTML += '<p><strong>Total Charging Sessions:</strong> ' + data.total_charging_sessions + '</p>';
+                
+            } catch (error) {
+                statusEl.innerHTML = '<p class="error">✗ Error: ' + error.message + '</p>';
+                dataEl.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        function displayChart(stationsData) {
+            const labels = stationsData.map(item => item.station_name || 'Unknown');
+            const data = stationsData.map(item => item.sessions_count || 0);
+            
+            const ctx = document.getElementById('stationsChart').getContext('2d');
+            
+            if (stationsChartInstance) {
+                stationsChartInstance.destroy();
+            }
+            
+            stationsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Charging Sessions',
+                        data: data,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        async function testRecordSession() {
+            const statusEl = document.getElementById('recordStatus');
+            
+            try {
+                statusEl.innerHTML = '<p style="color: blue;">Recording session...</p>';
+                
+                const response = await fetch('/EV_APP/BACKEND/API/CHARGING/record_session.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: 1,
+                        station_id: 99,
+                        station_name: 'Test Station ' + new Date().getTime(),
+                        operator_name: 'Test Op',
+                        latitude: 14.5995,
+                        longitude: 120.9842,
+                        energy_added_kwh: 5
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusEl.innerHTML = '<p class="success">✓ Session recorded: ' + data.session_id + '</p>';
+                    // Fetch analytics again
+                    setTimeout(fetchAnalytics, 500);
+                } else {
+                    statusEl.innerHTML = '<p class="error">✗ Error: ' + data.error + '</p>';
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<p class="error">✗ Error: ' + error.message + '</p>';
+            }
+        }
+        
+        // Auto-fetch on page load
+        window.addEventListener('load', fetchAnalytics);
+    </script>
+</body>
+</html>

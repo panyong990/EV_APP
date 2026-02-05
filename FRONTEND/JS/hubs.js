@@ -359,13 +359,60 @@ function showRouteModal(st) {
     
     document.getElementById('nav-dest-coords').textContent = `LAT: ${st.location.latitude.toFixed(4)} • LNG: ${st.location.longitude.toFixed(4)}`;
     
-    document.getElementById('confirm-nav-btn').onclick = () => {
+    document.getElementById('confirm-nav-btn').onclick = async () => {
         const destination = { name: st.name, lat: st.location.latitude, lng: st.location.longitude };
         localStorage.setItem('nav_destination', JSON.stringify(destination));
+        
+        // Record charging session
+        await recordChargingSession(st);
+        
         window.location.href = 'trip_planner.html';
     };
 
     document.getElementById('nav-toast').classList.add('show');
+}
+
+// Record charging session when user selects a hub
+async function recordChargingSession(station) {
+    if (!USER_ID) {
+        console.warn('No USER_ID found in localStorage');
+        return;
+    }
+    
+    console.log('Recording charging session for user:', USER_ID, 'station:', station.name);
+    
+    try {
+        const payload = {
+            user_id: USER_ID,
+            station_id: station.id,
+            station_name: station.name,
+            operator_name: station.operator_name || station.address.town || 'Unknown',
+            latitude: station.location.latitude,
+            longitude: station.location.longitude,
+            energy_added_kwh: 0
+        };
+        
+        console.log('Sending payload:', payload);
+        
+        const response = await fetch('/EV_APP/BACKEND/API/CHARGING/record_session.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('Response status:', response.status, response.ok);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Charging session recorded successfully:', result);
+        } else {
+            const errorText = await response.text();
+            console.error('API Error:', response.status, errorText);
+        }
+    } catch (error) {
+        console.error('Error recording charging session:', error);
+        // Silent fail - don't block navigation
+    }
 }
 
 function closeNavToast() {

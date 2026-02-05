@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Full Integration Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Full EV App Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Set Up Test User</h2>
+        <button onclick="setupTestUser()">Set Up User in LocalStorage</button>
+        <p>This simulates a logged-in user with user_id = 1</p>
+        <div id="setupStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 2: Record Charging Sessions</h2>
+        <button onclick="recordTestSessions()">Record 3 Test Sessions</button>
+        <div id="recordStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: Verify Analytics Data</h2>
+        <button onclick="verifyAnalytics()">Check Analytics API</button>
+        <div id="analyticsStatus"></div>
+        <pre id="analyticsData"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 4: Navigate to Pages</h2>
+        <p>Now you can test:</p>
+        <ul>
+            <li><a href="/EV_APP/FRONTEND/HTML/analytics.html" target="_blank">Open Analytics Page</a> - Should show 3 charging sessions in chart</li>
+            <li><a href="/EV_APP/FRONTEND/HTML/hubs.html" target="_blank">Open Hubs Page</a> - Select a station to record a session</li>
+        </ul>
+    </div>
+
+    <script>
+        function setupTestUser() {
+            const statusEl = document.getElementById('setupStatus');
+            try {
+                localStorage.setItem('user_id', '1');
+                localStorage.setItem('user_role', 'user');
+                localStorage.setItem('user_name', 'TestUser');
+                localStorage.setItem('user_email', 'test@example.com');
+                localStorage.setItem('first_name', 'Test');
+                localStorage.setItem('last_name', 'User');
+                
+                statusEl.innerHTML = `
+                    <p class="success">✓ Test user set up in localStorage:</p>
+                    <pre>${JSON.stringify({
+                        user_id: '1',
+                        user_role: 'user',
+                        user_name: 'TestUser',
+                        user_email: 'test@example.com'
+                    }, null, 2)}</pre>
+                `;
+            } catch (error) {
+                statusEl.innerHTML = '<p class="error">✗ Error: ' + error.message + '</p>';
+            }
+        }
+        
+        async function recordTestSessions() {
+            const statusEl = document.getElementById('recordStatus');
+            statusEl.innerHTML = '<p class="info">Recording sessions...</p>';
+            
+            const stations = [
+                { name: 'SM Aura Charging Hub', operator: 'SM Energy', lat: 14.5547, lng: 121.0242 },
+                { name: 'BGC EV Station', operator: 'Ayala', lat: 14.5567, lng: 121.0291 },
+                { name: 'Makati Power Hub', operator: 'Petron', lat: 14.5625, lng: 121.0154 }
+            ];
+            
+            let recorded = 0;
+            
+            for (const station of stations) {
+                try {
+                    const response = await fetch('/EV_APP/BACKEND/API/CHARGING/record_session.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: localStorage.getItem('user_id') || '1',
+                            station_id: Math.floor(Math.random() * 100),
+                            station_name: station.name,
+                            operator_name: station.operator,
+                            latitude: station.lat,
+                            longitude: station.lng,
+                            energy_added_kwh: Math.random() * 20
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        recorded++;
+                    }
+                } catch (error) {
+                    console.error('Error recording session:', error);
+                }
+                
+                await new Promise(r => setTimeout(r, 200));
+            }
+            
+            statusEl.innerHTML = '<p class="success">✓ Recorded ' + recorded + ' charging sessions</p>';
+        }
+        
+        async function verifyAnalytics() {
+            const statusEl = document.getElementById('analyticsStatus');
+            const dataEl = document.getElementById('analyticsData');
+            
+            try {
+                statusEl.innerHTML = '<p class="info">Fetching analytics data...</p>';
+                const response = await fetch('/EV_APP/BACKEND/API/ANALYTICS/get_analytics_data.php');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                const sessions = data.charging_sessions_by_station || [];
+                statusEl.innerHTML = `
+                    <p class="success">✓ Analytics data retrieved</p>
+                    <p><strong>Total Charging Sessions:</strong> ${data.total_charging_sessions}</p>
+                    <p><strong>Stations with Sessions:</strong> ${sessions.length}</p>
+                `;
+                
+                dataEl.textContent = JSON.stringify({
+                    total_charging_sessions: data.total_charging_sessions,
+                    charging_sessions_by_station: sessions.slice(0, 10)
+                }, null, 2);
+                
+            } catch (error) {
+                statusEl.innerHTML = '<p class="error">✗ Error: ' + error.message + '</p>';
+                dataEl.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Auto-run setup
+        window.addEventListener('load', () => {
+            setupTestUser();
+        });
+    </script>
+</body>
+</html>

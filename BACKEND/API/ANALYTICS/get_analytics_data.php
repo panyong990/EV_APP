@@ -21,12 +21,27 @@ try {
     $stmt->execute();
     $totalTrips = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
     
-    // 2. Total Charging Sessions (from trip_charging_stops)
+    // 2. Total Charging Sessions (from trip_charging_stops + charging_sessions table)
     $stmt = $db->prepare("
         SELECT COUNT(*) as total FROM trip_charging_stops
     ");
     $stmt->execute();
-    $totalChargingSessions = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $chargingStopsCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    // Count from charging_sessions table (if it exists)
+    $chargingSessionsCount = 0;
+    try {
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as total FROM charging_sessions
+        ");
+        $stmt->execute();
+        $chargingSessionsCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    } catch (Exception $e) {
+        // Table may not exist yet
+        $chargingSessionsCount = 0;
+    }
+    
+    $totalChargingSessions = $chargingStopsCount + $chargingSessionsCount;
     
     // 3. Average Efficiency (km per kWh converted to percentage)
     // 7 km/kWh = 100% baseline
@@ -82,21 +97,45 @@ try {
     }
     
     // Charging Sessions by Station (include all stations; sessions_count will be 0 if none)
-    $stmt = $db->prepare("
-        SELECT
-            cs.station_id,
-            cs.station_name,
-            cs.operator_name,
-            COUNT(tcs.stop_id) as sessions_count,
-            COALESCE(SUM(tcs.energy_added_kwh), 0) as energy_kwh
-        FROM charging_stations cs
-        LEFT JOIN trip_charging_stops tcs ON cs.station_id = tcs.station_id
-        GROUP BY cs.station_id
-        ORDER BY sessions_count DESC
-        LIMIT 20
-    ");
-    $stmt->execute();
-    $chargingSessionsByStation = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get data from charging_sessions table first, fallback to trip_charging_stops
+    $chargingSessionsByStation = [];
+    try {
+        // Try to get data from charging_sessions table
+        $stmt = $db->prepare("
+            SELECT
+                station_name,
+                operator_name,
+                COUNT(*) as sessions_count,
+                COALESCE(SUM(energy_added_kwh), 0) as energy_kwh
+            FROM charging_sessions
+            GROUP BY station_name, operator_name
+            ORDER BY sessions_count DESC
+            LIMIT 20
+        ");
+        $stmt->execute();
+        $chargingSessionsByStation = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // If charging_sessions table doesn't exist, try trip_charging_stops
+        try {
+            $stmt = $db->prepare("
+                SELECT
+                    cs.station_name,
+                    cs.operator_name,
+                    COUNT(tcs.stop_id) as sessions_count,
+                    COALESCE(SUM(tcs.energy_added_kwh), 0) as energy_kwh
+                FROM charging_stations cs
+                LEFT JOIN trip_charging_stops tcs ON cs.station_id = tcs.station_id
+                GROUP BY cs.station_id, cs.station_name, cs.operator_name
+                ORDER BY sessions_count DESC
+                LIMIT 20
+            ");
+            $stmt->execute();
+            $chargingSessionsByStation = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e2) {
+            // No data available
+            $chargingSessionsByStation = [];
+        }
+    }
     
     // 6. Get unique cities from trips for better city-based analysis
     $stmt = $db->prepare("

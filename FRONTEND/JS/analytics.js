@@ -4,13 +4,16 @@ let stationsChartInstance = null;
 // Fetch analytics data from API
 async function fetchAnalyticsData() {
   try {
+    console.log('Fetching analytics data...');
     const response = await fetch('/EV_APP/BACKEND/API/ANALYTICS/get_analytics_data.php');
     if (!response.ok) {
       throw new Error(`Failed to fetch analytics: ${response.status}`);
     }
     const data = await response.json();
     
-    console.log('Analytics Data:', data);
+    console.log('Analytics Data received:', data);
+    console.log('Charging sessions count:', data.total_charging_sessions);
+    console.log('Charging sessions by station:', data.charging_sessions_by_station);
     
     // Update summary cards
     document.getElementById('totalTripsCount').textContent = data.total_trips.toLocaleString();
@@ -19,15 +22,54 @@ async function fetchAnalyticsData() {
     
     // Update charts
     updateTripsChart(data.trips_by_location);
-    // Prefer sessions-per-station if available, otherwise fall back to station counts by region
+    
+    // Fetch charging stations data separately if not available
     if (data.charging_sessions_by_station && Array.isArray(data.charging_sessions_by_station) && data.charging_sessions_by_station.length) {
+      console.log('Using charging_sessions_by_station from API');
       updateStationsChart(data.charging_sessions_by_station, { type: 'sessions' });
-    } else {
+    } else if (data.charging_by_region && Array.isArray(data.charging_by_region) && data.charging_by_region.length) {
+      console.log('Using charging_by_region from API');
       updateStationsChart(data.charging_by_region, { type: 'stations' });
+    } else {
+      console.log('Fetching from charging stations fallback...');
+      // Fallback: fetch from charging stations API
+      await fetchChargingStationsData();
     }
     
   } catch (error) {
     console.error('Error fetching analytics:', error);
+    // Still try to fetch charging data
+    await fetchChargingStationsData();
+  }
+}
+
+// Fetch charging stations data as fallback
+async function fetchChargingStationsData() {
+  try {
+    const response = await fetch('/EV_APP/BACKEND/API/CHARGING/free.php');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch charging stations: ${response.status}`);
+    }
+    const data = await response.json();
+    
+    if (Array.isArray(data)) {
+      // Group by station name and count sessions
+      const stationMap = {};
+      data.forEach(station => {
+        const name = station.station_name || 'Unknown Station';
+        stationMap[name] = (stationMap[name] || 0) + 1;
+      });
+      
+      // Convert to chart format
+      const chartData = Object.entries(stationMap).map(([name, count]) => ({
+        station_name: name,
+        sessions_count: count
+      }));
+      
+      updateStationsChart(chartData, { type: 'sessions' });
+    }
+  } catch (error) {
+    console.error('Error fetching charging stations:', error);
   }
 }
 
@@ -152,6 +194,7 @@ function updateStationsChart(stationsData, opts = {}) {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   fetchAnalyticsData();
-  // Refresh every 30 seconds
-  setInterval(fetchAnalyticsData, 30000);
+  // Refresh every 10 seconds for real-time charging station updates
+  setInterval(fetchAnalyticsData, 10000);
 });
+
