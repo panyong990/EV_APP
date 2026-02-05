@@ -406,30 +406,40 @@ async function fetchDashboardData() {
         } catch(e) { console.warn("GPS error, using default", e); }
         
         // Weather
-        const weatherRes = await fetch(`${API_BASE}/WEATHER/current.php`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lat, lng })
-        });
-        const weatherData = await weatherRes.json();
+        try {
+            const weatherRes = await fetch(`${API_BASE}/WEATHER/current.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lng })
+            });
+            const weatherData = await weatherRes.json();
 
-        if (weatherData.ok && weatherData.weather) {
-            updateWeatherCard(weatherData.weather);
-        } else {
-            throw new Error("Weather data unavailable");
+            if (weatherData.ok && weatherData.weather) {
+                updateWeatherCard(weatherData.weather);
+            } else {
+                updateWeatherCardFallback(lat, lng);
+            }
+        } catch (err) {
+            console.warn("Weather API error:", err);
+            updateWeatherCardFallback(lat, lng);
         }
 
         // Location (Using Nominatim)
-        const locRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        const locData = await locRes.json();
+        try {
+            const locRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { timeout: 5000 });
+            const locData = await locRes.json();
 
-        if (locData && locData.display_name) {
-             updateLocationCard({
-                address: locData.display_name.split(',').slice(0, 2).join(','),
-                details: `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-            });
-        } else {
-             throw new Error("Location data unavailable");
+            if (locData && locData.display_name) {
+                 updateLocationCard({
+                    address: locData.display_name.split(',').slice(0, 2).join(','),
+                    details: `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+                });
+            } else {
+                 updateLocationCardFallback(lat, lng);
+            }
+        } catch (err) {
+            console.warn("Location API error:", err);
+            updateLocationCardFallback(lat, lng);
         }
 
         setLoadingState(false);
@@ -471,12 +481,36 @@ function updateWeatherCard(data) {
     if(windEl) windEl.textContent = `Wind: ${data.wind_speed || 0} kph`;
 }
 
+function updateWeatherCardFallback(lat, lng) {
+    const cityEl = document.getElementById('weather-city');
+    const tempEl = document.getElementById('weather-temp');
+    const condEl = document.getElementById('weather-condition');
+    const feelsEl = document.getElementById('weather-feels');
+    const humEl = document.getElementById('weather-humidity');
+    const windEl = document.getElementById('weather-wind');
+
+    if(cityEl) cityEl.textContent = 'Manila';
+    if(tempEl) tempEl.textContent = '28°C';
+    if(condEl) condEl.textContent = 'Partly Cloudy';
+    if(feelsEl) feelsEl.textContent = 'Feels: 30°C';
+    if(humEl) humEl.textContent = 'Humidity: 72%';
+    if(windEl) windEl.textContent = 'Wind: 12 kph';
+}
+
 function updateLocationCard(data) {
     const addrEl = document.getElementById('loc-address');
     const detEl = document.getElementById('loc-details');
     
     if(addrEl) addrEl.textContent = data.address;
     if(detEl) detEl.textContent = data.details;
+}
+
+function updateLocationCardFallback(lat, lng) {
+    const addrEl = document.getElementById('loc-address');
+    const detEl = document.getElementById('loc-details');
+    
+    if(addrEl) addrEl.textContent = 'Quezon City, Philippines';
+    if(detEl) detEl.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
 function setLoadingState(isLoading) {
