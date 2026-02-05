@@ -125,8 +125,26 @@ function updateTripsChart(tripsData) {
   const labels = tripsData.map(item => item.city);
   const data = tripsData.map(item => item.count);
   
+  // Truncate long labels for better chart rendering
+  const truncatedLabels = labels.map(label => {
+    if (typeof label === 'string' && label.length > 20) {
+      return label.substring(0, 17) + '...';
+    }
+    return label;
+  });
+  
   const tripsCtx = document.getElementById("tripsChart").getContext('2d');
   const tripsOpts = JSON.parse(JSON.stringify(commonOptions));
+  
+  // Configure x-axis for long labels
+  tripsOpts.scales.x.ticks = {
+    font: { family: 'Inter', size: 10, weight: '500' },
+    color: '#64748b',
+    maxRotation: 45,
+    minRotation: 45
+  };
+  tripsOpts.scales.x.offset = true;
+  tripsOpts.layout.padding = { top: 5, bottom: 5, left: 5, right: 10 };
   
   if (tripsChartInstance) {
     tripsChartInstance.destroy();
@@ -135,7 +153,7 @@ function updateTripsChart(tripsData) {
   tripsChartInstance = new Chart(tripsCtx, {
     type: "bar",
     data: {
-      labels: labels,
+      labels: truncatedLabels,
       datasets: [
         {
           label: "Trips (Locations)",
@@ -166,6 +184,24 @@ function updateStationsChart(stationsData, opts = {}) {
   const stationsCtx = document.getElementById("stationsChart").getContext('2d');
   const stationsOpts = JSON.parse(JSON.stringify(commonOptions));
   
+  // Truncate long labels for better chart rendering
+  const truncatedLabels = labels.map(label => {
+    if (typeof label === 'string' && label.length > 20) {
+      return label.substring(0, 17) + '...';
+    }
+    return label;
+  });
+  
+  // Configure x-axis for long labels
+  stationsOpts.scales.x.ticks = {
+    font: { family: 'Inter', size: 10, weight: '500' },
+    color: '#64748b',
+    maxRotation: 45,
+    minRotation: 45
+  };
+  stationsOpts.scales.x.offset = true;
+  stationsOpts.layout.padding = { top: 5, bottom: 5, left: 5, right: 10 };
+  
   if (stationsChartInstance) {
     stationsChartInstance.destroy();
   }
@@ -173,7 +209,7 @@ function updateStationsChart(stationsData, opts = {}) {
   stationsChartInstance = new Chart(stationsCtx, {
     type: "bar",
     data: {
-      labels: labels,
+      labels: truncatedLabels,
       datasets: [
         {
           label: mode === 'sessions' ? "Charging Sessions (per station)" : "Charging Stations",
