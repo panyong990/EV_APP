@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="required-role" content="user" />
   <title>Charging Hubs Directory</title>
 
   <!-- Tailwind + Dark-mode bootstrap -->
@@ -303,6 +304,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Your JS -->
+  <script src="../JS/auth_guard.js"></script>
+  <script>try{ requireRole(['user']); }catch(e){}</script>
   <script src="../JS/hubs.js"></script>
   <script>
     // Initialize Lucide icons

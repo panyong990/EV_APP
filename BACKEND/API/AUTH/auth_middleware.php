@@ -33,7 +33,7 @@ $tokenHash = hash('sha256', $token);
 try {
     $db = Database::conn();
     // Check if token exists and is not expired
-    $stmt = $db->prepare("SELECT u.id, u.username, u.email FROM auth_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token_hash = ? AND s.expires_at > NOW() LIMIT 1");
+    $stmt = $db->prepare("SELECT u.id, u.username, u.email, COALESCE(u.role, '') as role FROM auth_sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token_hash = ? AND s.expires_at > NOW() LIMIT 1");
     $stmt->execute([$tokenHash]);
     $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -41,6 +41,20 @@ try {
         http_response_code(401);
         echo json_encode(['ok' => false, 'error' => 'Unauthorized: Invalid or expired token']);
         exit;
+    }
+    // Normalize role for easier checks
+    $currentUser['role'] = isset($currentUser['role']) ? strtolower($currentUser['role']) : '';
+
+    // Helper to require specific roles in API endpoints that include this middleware
+    function require_role($allowed = []) {
+        global $currentUser;
+        $allowed = array_map('strtolower', (array)$allowed);
+        $role = isset($currentUser['role']) ? $currentUser['role'] : '';
+        if (!in_array($role, $allowed, true)) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Forbidden: insufficient role']);
+            exit;
+        }
     }
     // $currentUser is now available to the script that included this file
 } catch (Exception $e) {

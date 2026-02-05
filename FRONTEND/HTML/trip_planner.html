@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="required-role" content="user" />
   <title>Trip Planner</title>
 
   <!-- Tailwind CSS -->
@@ -31,6 +32,10 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="../CSS/trip_planner.css" />
+
+  <!-- Auth Guard (Run Early) -->
+  <script src="../JS/auth_guard.js"></script>
+  <script>requireRole(['user']);</script>
 
   <style>
     /* Hide scrollbar for clean panel */

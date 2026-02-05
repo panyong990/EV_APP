@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="required-role" content="user" />
     <title>Profile Preview</title>
 
     <!-- Tailwind + Lucide -->
@@ -827,6 +828,8 @@
     </style>
 
     <!-- Your JS -->
+    <script src="../JS/auth_guard.js"></script>
+    <script>try{ requireRole(['user']); }catch(e){}</script>
     <script src="../JS/feedback.js"></script>
     <script src="../JS/profile.js"></script>
     <script>
