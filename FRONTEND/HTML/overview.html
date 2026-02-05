@@ -311,6 +311,7 @@
 
   <!-- Page JS -->
   <script src="../JS/auth_guard.js"></script>
+  <script>try{ requireRole(['admin']); }catch(e){}</script>
   <script src="../JS/overview.js"></script>
   <script>
     const menuBtn = document.getElementById('menu-btn');
