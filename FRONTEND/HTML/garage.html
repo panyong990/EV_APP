@@ -7,169 +7,171 @@
     <title>My Garage</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Apply Dark Mode immediately from Profile preferences
-        if (localStorage.getItem('pref_dark') === 'true') {
-            document.documentElement.classList.add('dark');
-        }
-        tailwind.config = { darkMode: 'class' };
-    </script>
-    <script src="../JS/auth_guard.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { font-family: 'Inter', sans-serif; transition: 0.3s; }
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
         .car-card { 
-            background: rgba(255, 255, 255, 0.6); 
+            background: white/60;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 20px; overflow: visible;
-            box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05), 0 0 15px rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            overflow: visible;
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
             transition: all 0.2s ease;
             position: relative;
         }
-        .car-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); background: rgba(255, 255, 255, 0.75); }
-        .car-card.active-car { border-color: #22c55e; background: rgba(240, 253, 244, 0.7); box-shadow: 0 10px 30px -5px rgba(34, 197, 94, 0.15), 0 0 20px rgba(34, 197, 94, 0.3); }
+        .car-card:hover { transform: translateY(-4px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1); }
+        .car-card.active-car { border-color: #22c55e; background: rgba(240, 253, 244, 0.7); }
 
-        .search-wrap { position: relative; max-width: 600px; margin: 0 auto; }
         .search-input {
-            width: 100%; padding: 16px 24px; padding-left: 50px;
-            border-radius: 99px; border: none;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            font-size: 16px; outline: none; transition: 0.2s;
+            width: 100%; padding: 12px 20px; padding-left: 40px;
+            border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            font-size: 15px; outline: none; transition: 0.2s;
         }
+        .search-input:focus { background: rgba(255, 255, 255, 0.8); border-color: rgba(255, 255, 255, 0.7); }
 
-        .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-        
-        .action-btn { 
-            position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.95); 
-            color: #4b5563; width: 32px; height: 32px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; 
-        }
-        .menu-dropdown { 
-            position: absolute; top: 45px; right: 10px; background: white; border-radius: 12px; 
-            z-index: 50; width: 140px; display: none; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
-        }
-        .menu-dropdown.show { display: block; }
-
-        html.dark body { color: white; }
-        html.dark .car-card { background: rgba(30, 41, 59, 0.6); border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3), 0 0 15px rgba(59, 130, 246, 0.15); }
-        html.dark .car-card.active-car { background: rgba(6, 78, 59, 0.6); border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.3), 0 0 20px rgba(16, 185, 129, 0.2); }
-        html.dark .bg-white { background: rgba(30, 41, 59, 0.8); }
-        html.dark .search-input { background: #1e293b; color: white; }
+        .modal-bg { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
 
         #toast {
             position: fixed; top: 85px; left: 50%; transform: translateX(-50%) translateY(-20px);
             z-index: 10000; background: white; color: #111827; padding: 12px 24px;
             border-radius: 99px; font-weight: 600; font-size: 14px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             border: 1px solid #f3f4f6;
             opacity: 0;
-            max-width: 90vw;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;
             display: flex; align-items: center; gap: 10px;
         }
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        html.dark #toast { background: #1e293b; color: white; border-color: #334151; }
     </style>
+
+    <!-- Auth Guard (Run Early) -->
+    <script src="../JS/auth_guard.js"></script>
+    <script>requireRole(['user']);</script>
 </head>
-<body class="pb-20 bg-gradient-to-br from-[#F0F4F8] to-[#D9E2EC] dark:from-slate-950 dark:to-slate-900 min-h-screen">
 
-    <div class="sticky top-0 z-50 bg-white/30 backdrop-blur-[20px] border-b border-white/40 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:bg-slate-900/60 dark:border-white/10">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
-                <i class="fa-solid fa-warehouse text-black dark:text-white"></i> My Garage
-            </h1>
-            
-            <div class="flex items-center gap-4">
-                <a href="dashboard.html" class="bg-slate-900 hover:bg-black text-white px-6 py-2 rounded-xl font-bold transition shadow-lg">
-                    Dashboard
-                </a>
+<body class="h-screen bg-gradient-to-br from-[#F0F4F8] to-[#D9E2EC] text-slate-900 overflow-hidden flex flex-col">
+
+<header class="flex-none z-30 bg-white/30 backdrop-blur-[20px] border-b border-white/40 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+  <div class="mx-auto max-w-6xl h-[68px] px-4 flex items-center justify-between">
+    <!-- Left: Navigation Tabs -->
+    <nav class="flex items-center gap-1 h-full overflow-x-auto no-scrollbar">
+      <a href="dashboard.html" class="h-full flex items-center border-b-[3px] border-transparent hover:border-black/20 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 whitespace-nowrap">Dashboard</a>
+      <a href="trip_planner.html" class="h-full flex items-center border-b-[3px] border-transparent hover:border-black/20 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 whitespace-nowrap">Trip Planner</a>
+      <a href="hubs.html" class="h-full flex items-center border-b-[3px] border-transparent hover:border-black/20 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 whitespace-nowrap">Charging Hub</a>
+      <a href="profile.html" class="h-full flex items-center border-b-[3px] border-transparent hover:border-black/20 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-3 whitespace-nowrap">Profile</a>
+    </nav>
+
+    <!-- Right: User Block -->
+    <div class="flex items-center gap-3 pl-4 shrink-0">
+      <div class="text-right hidden sm:block">
+        <div class="text-sm font-semibold text-gray-900 leading-tight" id="header-user-name">User</div>
+        <div class="text-xs font-medium text-gray-500 mt-0.5" id="header-car-name">No Car Selected</div>
+      </div>
+      <img src="https://i.pravatar.cc/256?img=12" alt="Profile" class="h-10 w-10 rounded-full border border-white/60 shadow-sm object-cover" />
+    </div>
+  </div>
+</header>
+
+<div class="flex-1 overflow-y-auto min-h-0">
+<main class="mx-auto max-w-6xl px-4 py-6 pb-6">
+
+  <!-- Title Section -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900">My Garage</h1>
+    <p class="text-sm text-gray-600 mt-1">Manage your electric vehicles</p>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-6 relative max-w-2xl">
+    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+    <input type="text" id="car-search" class="search-input w-full" placeholder="Search by brand or model (Tesla Model 3, BYD Atto 3…)" oninput="handleSearch(this.value)">
+    <div id="search-results" class="absolute w-full bg-white/95 backdrop-blur-md border border-white/50 mt-2 rounded-2xl shadow-2xl overflow-hidden hidden z-50 text-left"></div>
+  </div>
+
+  <!-- Cars Grid -->
+  <section class="space-y-3">
+    <div id="garage-grid" class="flex flex-col gap-3"></div>
+  </section>
+
+</main>
+</div>
+
+<!-- Specs Modal -->
+<div id="spec-modal" class="fixed inset-0 modal-bg hidden z-[100] flex items-center justify-center p-4">
+    <div class="bg-white/90 backdrop-blur-xl border border-white/50 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center transition">
+            <i class="fa-solid fa-times text-lg"></i>
+        </button>
+        
+        <div class="mb-6">
+            <div class="flex items-center gap-2 mb-1">
+                <div class="text-xs font-bold text-blue-600 uppercase tracking-widest" id="modal-brand">--</div>
+                <div class="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600" id="modal-year">--</div>
+            </div>
+            <h2 class="text-2xl font-black text-gray-900 leading-tight" id="modal-model">--</h2>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                <div class="text-[10px] text-blue-600 font-bold uppercase">Official Range</div>
+                <div class="text-xl font-black text-gray-900 mt-1"><span id="modal-range">--</span> <small class="text-xs">km</small></div>
+            </div>
+            <div class="bg-green-50 border border-green-100 p-3 rounded-xl">
+                <div class="text-[10px] text-green-600 font-bold uppercase">Battery</div>
+                <div class="text-xl font-black text-gray-900 mt-1"><span id="modal-batt">--</span> <small class="text-xs">kWh</small></div>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-100 p-3 rounded-xl">
+                <div class="text-[10px] text-yellow-700 font-bold uppercase">Real Range</div>
+                <div class="text-xl font-black text-gray-900 mt-1"><span id="modal-real">--</span> <small class="text-xs">km</small></div>
+            </div>
+            <div class="bg-purple-50 border border-purple-100 p-3 rounded-xl">
+                <div class="text-[10px] text-purple-600 font-bold uppercase">Plug Type</div>
+                <div class="text-lg font-black text-gray-900 mt-1 truncate" id="modal-plug">--</div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="max-w-4xl mx-auto px-4 mt-8">
-        <div class="text-center mb-6">
-            <h2 class="text-3xl font-bold dark:text-white mb-2">Find Your EV</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-6">Search and manage vehicles in your garage</p>
-            <div class="search-wrap relative max-w-lg mx-auto">
-                <i class="fa-solid fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                <input type="text" id="car-search" class="search-input" placeholder="Search by brand or model (Tesla Model 3, BYD Atto 3…)" oninput="handleSearch(this.value)">
-                <div id="search-results" class="absolute w-full bg-white dark:bg-slate-800 mt-2 rounded-2xl shadow-2xl overflow-hidden hidden z-50 text-left"></div>
-            </div>
+<!-- Delete Modal -->
+<div id="delete-modal" class="fixed inset-0 modal-bg hidden z-[110] flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative text-center">
+        <button onclick="closeDeleteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center transition">
+            <i class="fa-solid fa-times text-lg"></i>
+        </button>
+        <div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+            <i class="fa-regular fa-trash-can text-2xl"></i>
         </div>
-
-        <div id="garage-grid" class="flex flex-col gap-4"></div>
-    </div>
-
-    <div id="spec-modal" class="fixed inset-0 modal-bg hidden z-[100] flex items-center justify-center p-4">
-        <div class="bg-white/80 backdrop-blur-xl border border-white/50 dark:bg-slate-900/80 dark:border-white/10 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative transform transition-all scale-100">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 w-8 h-8 flex items-center justify-center transition">
-                <i class="fa-solid fa-times text-lg"></i>
-            </button>
-            
-            <div class="mb-6">
-                <div class="flex items-center gap-2 mb-1">
-                    <div class="text-xs font-bold text-blue-600 uppercase tracking-widest" id="modal-brand">--</div>
-                    <div class="bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-gray-600 dark:text-gray-300" id="modal-year">--</div>
-                </div>
-                <h2 class="text-2xl font-black text-gray-900 dark:text-white leading-tight" id="modal-model">--</h2>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-blue-50/50 backdrop-blur-sm border border-blue-100/50 dark:bg-blue-900/20 dark:border-blue-800/30 p-3 rounded-xl">
-                    <div class="text-[10px] text-blue-500 font-bold uppercase">Official Range</div>
-                    <div class="text-xl font-black dark:text-white"><span id="modal-range">--</span> <small class="text-xs">km</small></div>
-                </div>
-                <div class="bg-green-50/50 backdrop-blur-sm border border-green-100/50 dark:bg-green-900/20 dark:border-green-800/30 p-3 rounded-xl">
-                    <div class="text-[10px] text-green-500 font-bold uppercase">Battery</div>
-                    <div class="text-xl font-black dark:text-white"><span id="modal-batt">--</span> <small class="text-xs">kWh</small></div>
-                </div>
-                <div class="bg-yellow-50/50 backdrop-blur-sm border border-yellow-100/50 dark:bg-yellow-900/20 dark:border-yellow-800/30 p-3 rounded-xl">
-                    <div class="text-[10px] text-yellow-600 font-bold uppercase">Real Range</div>
-                    <div class="text-xl font-black dark:text-white"><span id="modal-real">--</span> <small class="text-xs">km</small></div>
-                </div>
-                <div class="bg-purple-50/50 backdrop-blur-sm border border-purple-100/50 dark:bg-purple-900/20 dark:border-purple-800/30 p-3 rounded-xl">
-                    <div class="text-[10px] text-purple-500 font-bold uppercase">Plug Type</div>
-                    <div class="text-lg font-black dark:text-white truncate" id="modal-plug">--</div>
-                </div>
-            </div>
+        <h2 class="text-2xl font-black text-gray-900 mb-2">Remove Vehicle?</h2>
+        <p class="text-sm text-gray-500 mb-6 leading-relaxed" id="delete-msg">
+            Are you sure you want to remove this vehicle? This action cannot be undone.
+        </p>
+        
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()" class="flex-1 py-3 border border-gray-200 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+            <button onclick="confirmDelete()" id="confirm-delete-btn" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg transition">Remove</button>
         </div>
     </div>
+</div>
 
-    <div id="delete-modal" class="fixed inset-0 modal-bg hidden z-[110] flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 relative text-center transform transition-all scale-100">
-            <button onclick="closeDeleteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 w-8 h-8 flex items-center justify-center transition">
-                <i class="fa-solid fa-times text-lg"></i>
-            </button>
-            <div class="w-14 h-14 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 dark:text-red-400">
-                <i class="fa-regular fa-trash-can text-2xl"></i>
-            </div>
-            <h2 class="text-2xl font-black text-gray-900 dark:text-white mb-2">Remove Vehicle?</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed" id="delete-msg">
-                Are you sure you want to remove this vehicle? This action cannot be undone.
-            </p>
-            
-            <div class="flex gap-3">
-                <button onclick="closeDeleteModal()" class="flex-1 py-3.5 border border-gray-200 dark:border-slate-600 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition">Cancel</button>
-                <button onclick="confirmDelete()" id="confirm-delete-btn" class="flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-600/20 transition">Remove</button>
-            </div>
-        </div>
+<div id="toast">
+    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-check text-green-600 text-sm"></i>
     </div>
+    <span id="toast-msg">Success</span>
+</div>
 
-    <div id="toast">
-        <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-            <i class="fa-solid fa-check text-green-600 dark:text-green-400 text-sm"></i>
-        </div>
-        <span id="toast-msg">Success</span>
-    </div>
-
-    <script>
+<script>
         const API_URL = "http://localhost/WEBPROG_PROJ/BACKEND/API/GARAGE/vehicles.php";
         const API_BASE = "http://localhost/WEBPROG_PROJ/BACKEND/API/GARAGE";
         const VEHICLE_API = `${API_BASE}/vehicles.php`;
@@ -184,8 +186,13 @@
         const DIST_LABEL = PREF_UNIT === 'MILES' ? 'mi' : 'km';
 
         document.addEventListener("DOMContentLoaded", () => {
-            try { requireRole(['user']); } catch(e) { if(!localStorage.getItem('user_id')) window.location.href = 'login.html'; }
             renderGarage();
+            
+            // Update header info
+            const fullName = localStorage.getItem('full_display_name') || localStorage.getItem('user_name') || 'User';
+            const activeCar = JSON.parse(localStorage.getItem('active_car') || '{}');
+            document.getElementById('header-user-name').textContent = fullName;
+            document.getElementById('header-car-name').textContent = activeCar.brand && activeCar.model ? `${activeCar.brand} ${activeCar.model}` : 'No Car Selected';
         });
 
         // RESTORED OLD SEARCH LOGIC
@@ -212,11 +219,11 @@
                     if(cars.length > 0) {
                         cars.forEach(car => {
                             const div = document.createElement('div');
-                            div.className = "p-4 border-b dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between transition";
+                            div.className = "p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center justify-between transition";
                             div.innerHTML = `
                                 <div class="flex items-center gap-4">
                                     <div>
-                                        <div class="font-bold text-gray-900 dark:text-white">${car.brand} ${car.model}</div>
+                                        <div class="font-bold text-gray-900">${car.brand} ${car.model}</div>
                                         <div class="text-xs text-gray-500">${car.year} • ${Math.round(car.range_km * DIST_FACTOR)} ${DIST_LABEL}</div>
                                     </div>
                                 </div>
@@ -305,7 +312,7 @@
                 garage.sort((a, b) => (b.is_active == 1) - (a.is_active == 1));
 
                 if(garage.length === 0) {
-                    grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400 italic">Garage empty. Search to add cars.</div>';
+                    grid.innerHTML = '<div class="text-center py-10 text-gray-400 italic">No vehicles yet. Search above to add cars to your garage.</div>';
                     localStorage.removeItem('active_car'); // Clear local active car if garage empty
                     return;
                 }
@@ -327,25 +334,25 @@
                     div.innerHTML = `
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
-                                <h3 class="font-black text-lg dark:text-white">${car.brand} ${car.model}</h3>
-                                ${isActive ? `<span class="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800 uppercase tracking-wide">Active</span>` : ''}
+                                <h3 class="font-bold text-base text-gray-900">${car.brand} ${car.model}</h3>
+                                ${isActive ? `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide">Active</span>` : ''}
                             </div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">${car.year} • ${Math.round(car.range_km * DIST_FACTOR)} ${DIST_LABEL}</div>
+                            <div class="text-sm text-gray-500 mt-0.5">${car.year} • ${Math.round(car.range_km * DIST_FACTOR)} ${DIST_LABEL}</div>
                         </div>
                         
-                        <div class="flex items-center gap-3">
-                            ${!isActive ? `<button onclick='setActiveCar(${carJson}, this)' class="px-4 py-2 bg-slate-900 dark:bg-blue-600 text-white rounded-lg font-bold text-xs shadow-sm hover:shadow-md transition active:scale-95">Set Active</button>` : ''}
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${!isActive ? `<button onclick='setActiveCar(${carJson}, this)' class="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs shadow-sm hover:shadow-md transition active:scale-95">Set Active</button>` : ''}
                             
-                            <button onclick="deleteCar('${car.garage_id}', '${car.brand} ${car.model}')" 
-                                    class="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition"
-                                    title="Remove Vehicle">
-                                <i class="fa-regular fa-trash-can"></i>
+                            <button onclick="openSpecModal(${carJson})" 
+                                    class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                                    title="View Specs">
+                                <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
                             </button>
 
-                            <button class="w-8 h-8 rounded-full bg-gray-50 dark:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-600 transition" 
-                                    onclick='openSpecModal(${carJson})'
-                                    title="View Specs">
-                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            <button onclick="deleteCar('${car.garage_id}', '${car.brand} ${car.model}')" 
+                                    class="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 transition"
+                                    title="Remove Vehicle">
+                                <i class="fa-regular fa-trash-can text-sm"></i>
                             </button>
                         </div>
                     `;
@@ -353,7 +360,7 @@
                 });
             } catch (e) {
                 console.error(e);
-                grid.innerHTML = '<div class="col-span-full text-center text-red-500">Failed to load garage.</div>';
+                grid.innerHTML = '<div class="text-center text-red-500 py-10">Failed to load garage.</div>';
             }
         }
 

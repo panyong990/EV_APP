@@ -631,9 +631,10 @@ async function loadGaragePreview() {
         const json = await res.json();
         
         if (json.ok && json.data && json.data.length > 0) {
-            garageList.innerHTML = json.data.map(car => `
+            // Sort active car to top
+            const sorted = json.data.sort((a, b) => (b.is_active == 1) - (a.is_active == 1));
+            garageList.innerHTML = sorted.map(car => `
                 <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-200">
-                    <img src="${car.image}" class="w-10 h-10 rounded-lg object-cover bg-gray-100" onerror="this.style.display='none'">
                     <div class="flex-1 min-w-0">
                         <div class="text-sm font-semibold text-gray-900 truncate">${car.brand} ${car.model}</div>
                         <div class="text-xs text-gray-500">${car.year} • ${Math.round(car.range_km)} km</div>
