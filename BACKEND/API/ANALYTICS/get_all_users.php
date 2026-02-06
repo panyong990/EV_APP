@@ -26,6 +26,7 @@ try {
             u.email,
             u.created_at,
             u.is_verified,
+            u.role,
             COUNT(ug.garage_id) as evs,
             MAX(GREATEST(
                 COALESCE((SELECT MAX(created_at) FROM trip_logs WHERE user_id = u.id), '2000-01-01'),
@@ -34,7 +35,7 @@ try {
             )) as last_activity
         FROM users u
         LEFT JOIN user_garage ug ON u.id = ug.user_id
-        GROUP BY u.id, u.username, u.name, u.email, u.created_at, u.is_verified
+        GROUP BY u.id, u.username, u.name, u.email, u.created_at, u.is_verified, u.role
         ORDER BY u.created_at DESC
     ";
     
@@ -68,6 +69,7 @@ try {
             'status' => $status,
             'joined' => $joined,
             'is_verified' => (bool)$row['is_verified'],
+            'role' => $row['role'] ?? '',
             'efficiency' => null,
             'saved' => null,
             'used' => null

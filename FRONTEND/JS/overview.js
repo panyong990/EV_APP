@@ -60,7 +60,13 @@ async function fetchAndDisplayUsers() {
       return;
     }
     
-    users.forEach(user => {
+    // Filter out admins, sort by joined date (most recent first) and limit to 5
+    const recentUsers = users
+      .filter(user => user.role?.toLowerCase() !== 'admin')
+      .sort((a, b) => new Date(b.joined) - new Date(a.joined))
+      .slice(0, 5);
+    
+    recentUsers.forEach(user => {
       const row = document.createElement('tr');
       row.style.cssText = 'border-bottom: 1px solid #f3f4f6; transition: background-color 0.15s ease;';
       row.onmouseover = () => row.style.backgroundColor = '#f9fafb';

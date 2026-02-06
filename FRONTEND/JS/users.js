@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filtered = users.filter(user => 
       ((user.name || '').toLowerCase().includes(filter) || (user.email || '').toLowerCase().includes(filter)) &&
-      (status === "" || user.status === status)
+      (status === "" || user.status === status) &&
+      (user.role?.toLowerCase() !== 'admin')
     );
 
     if (filtered.length === 0) {
