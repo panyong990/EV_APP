@@ -25,6 +25,16 @@ if (!String(state.profile.coverUrl).includes("unsplash.com")) {
     "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=2000&q=80";
 }
 
+// Load persisted avatar/cover from localStorage if available
+try {
+  const savedAvatar = localStorage.getItem('avatar_url');
+  const savedCover = localStorage.getItem('cover_url');
+  const savedCoverPos = localStorage.getItem('cover_positionY');
+  if (savedAvatar) state.profile.avatarUrl = savedAvatar;
+  if (savedCover) state.profile.coverUrl = savedCover;
+  if (savedCoverPos) state.profile.coverPositionY = parseFloat(savedCoverPos);
+} catch (e) {}
+
 state.draft = JSON.parse(JSON.stringify(state.profile));
 
 function initials(name) {
@@ -104,20 +114,27 @@ function syncUI() {
 }
 
 function pickImage(file, kind) {
-  const url = URL.createObjectURL(file);
-  state.objectUrls.push(url);
-
-  if (kind === "cover") {
-    state.draft.coverUrl = url;
-    state.draft.coverPositionY = 50;
-  }
-  if (kind === "avatar") state.draft.avatarUrl = url;
-
-  syncUI();
+  // Read file as data URL so the image remains usable across navigations
+  const reader = new FileReader();
+  reader.onload = function (ev) {
+    const dataUrl = ev.target.result;
+    if (kind === "cover") {
+      state.draft.coverUrl = dataUrl;
+      state.draft.coverPositionY = 50;
+    }
+    if (kind === "avatar") state.draft.avatarUrl = dataUrl;
+    syncUI();
+  };
+  reader.readAsDataURL(file);
 }
 
 function cleanupObjectUrls() {
-  state.objectUrls.forEach((u) => URL.revokeObjectURL(u));
+  // Only revoke blob/object URLs (if any were created elsewhere).
+  state.objectUrls.forEach((u) => {
+    try {
+      if (typeof u === 'string' && u.startsWith('blob:')) URL.revokeObjectURL(u);
+    } catch (e) {}
+  });
   state.objectUrls = [];
 }
 
@@ -153,6 +170,23 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   // Update LocalStorage (Backend Logic)
   localStorage.setItem("full_display_name", state.profile.name);
   localStorage.setItem("user_name", state.profile.username);
+  // Persist avatar and cover so changes survive reloads
+  try {
+    localStorage.setItem('avatar_url', state.profile.avatarUrl);
+    localStorage.setItem('cover_url', state.profile.coverUrl);
+    localStorage.setItem('cover_positionY', String(state.profile.coverPositionY));
+  } catch (e) {}
+
+  // Update other places in the current page (site header avatars etc.)
+  try {
+    // Common alt attributes used across pages
+    document.querySelectorAll('img[alt="Profile"], img[alt="Avatar"], img.profile-avatar').forEach(img => {
+      img.src = state.profile.avatarUrl;
+    });
+    // Update any initials display
+    const headerInitials = document.getElementById('headerInitials');
+    if (headerInitials) headerInitials.textContent = initials(state.profile.name);
+  } catch (e) {}
   
   cleanupObjectUrls();
   setEditing(false);
