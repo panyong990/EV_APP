@@ -45,13 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     filtered.forEach(user => {
       const row = document.createElement("tr");
       const evCount = (user.evs > 0) ? user.evs : '<span style="color: #d1d5db;">—</span>';
+      const statusClass = (user.status === "Active") ? "status-active" : (user.status === "Unverified") ? "status-unverified" : "status-inactive";
 
       row.innerHTML = `
         <td class="user-name">${user.name || ''}</td>
         <td class="text-muted">${user.email || ''}</td>
         <td class="text-muted">${evCount}</td>
         <td>
-          <span class="status-pill ${user.status === "Active" ? "status-active" : "status-inactive"}">
+          <span class="status-pill ${statusClass}">
             ${user.status || ''}
           </span>
         </td>
