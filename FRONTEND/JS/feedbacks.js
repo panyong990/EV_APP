@@ -118,9 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     const categoryDisplay = feedback.category || sourceMap[feedback.source?.toLowerCase()] || feedback.source || 'App';
-    const status = feedback.reviewed ? 'Reviewed' : 'New';
-    const statusColor = feedback.reviewed ? '#6b7280' : '#2563eb';
-    const statusBgColor = feedback.reviewed ? '#f3f4f6' : '#eff6ff';
+    // status removed per UI preference
 
     const feedbackText = escapeHtml(feedback.text || '(No comment)');
     const truncatedText = feedbackText.length > 100 ? feedbackText.substring(0, 100) + '...' : feedbackText;
@@ -131,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="text-align: left; padding: 12px 0; color: #374151; font-size: 0.9375rem;" title="${feedbackText}">${truncatedText}</td>
         <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">${escapeHtml(categoryDisplay)}</td>
         <td style="text-align: left; padding: 12px 0; color: #6b7280; font-size: 0.875rem;">${dateStr}<br><span style="font-size: 0.8125rem; color: #9ca3af;">${timeStr}</span></td>
-        <td style="text-align: center; padding: 12px 0;"><span style="display:inline-block; padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.8125rem; font-weight:500; background-color:${statusBgColor}; color:${statusColor};">${status}</span></td>
       </tr>
     `;
   }
