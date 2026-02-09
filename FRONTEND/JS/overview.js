@@ -88,6 +88,8 @@ async function fetchAndDisplayUsers() {
       `;
       tableBody.appendChild(row);
     });
+
+    // no-op: new users card removed
     
   } catch (error) {
     console.error('Error fetching users:', error);

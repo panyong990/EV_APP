@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const evCount = (user.evs > 0) ? user.evs : '<span style="color: #d1d5db;">—</span>';
       const statusClass = (user.status === "Active") ? "status-active" : (user.status === "Unverified") ? "status-unverified" : "status-inactive";
 
+
       row.innerHTML = `
         <td class="user-name">${user.name || ''}</td>
         <td class="text-muted">${user.email || ''}</td>
@@ -73,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     lucide.createIcons();
   }
+
+  
 
   // Event listeners
   searchInput?.addEventListener("input", renderUsers);
